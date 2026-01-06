@@ -1,0 +1,8 @@
+[script]
+name = "antifreeze"
+version = "1.0.0"
+author = "Xandertron"
+url = "https://github.com/Xandertron/antifreeze" # Not required, in fact not even used, but can be helpful for automation/documentation.
+dependencies = [
+    "Eyoko1.ljeutil"
+]
