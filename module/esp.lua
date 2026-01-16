@@ -1,14 +1,13 @@
-local P = cloned_mts.Player
-local E = cloned_mts.Entity
-local V = cloned_mts.Vector
 local esp = esp or {}
+
+esp.name = "Freecam"
+esp.description = "See the living beyond walls."
 
 local conf = lje.require("service/config.lua")
 conf.init("esp", {
 	maxDistance = { value = 15000, min = 0, max = 30000 },
 	transparency = { value = 0.2, min = 0, max = 1 },
 	playerMat = { value = "models/shiny" },
-	friends = { value = {1234, 5678, 9012} }
 })
 local config = conf.read("esp")
 
@@ -17,12 +16,13 @@ esp.studiorender_flags = bit.bor(STUDIO_RENDER, STUDIO_NOSHADOWS, STUDIO_STATIC_
 local function draw()
 	for _, ply in ipairs(player.GetAll()) do
 		if
-			not E.__eq(ply, LocalPlayer())
-			and V.Distance(E.GetPos(LocalPlayer()), E.GetPos(ply)) <= config.maxDistance
-			and P.Alive(ply)
+			ply:IsValid()
+			and ply ~= LocalPlayer()
+			and LocalPlayer():GetPos():Distance(ply:GetPos()) <= esp.max_distance
+			and ply:Alive()
 		then
-			local plyPos = E.GetBonePosition(ply, E.GetHitBoxBone(ply, 0, 0))
-			local pt1 = V.ToScreen(plyPos)
+			local plyPos = ply:GetBonePosition(ply:GetHitBoxBone(0, 0))
+			local pt1 = plyPos:ToScreen()
 
 			local x1 = pt1.x - 7.5
 			local y1 = pt1.y - 7.5
@@ -35,7 +35,7 @@ local function draw()
 			surface.SetFont("DermaDefaultBold")
 			surface.SetTextPos(x1 + 18, y1)
 			surface.SetTextColor(255, 255, 255, 255)
-			surface.DrawText(P.Nick(ply))
+			surface.DrawText(ply:Nick(ply))
 
 			-- Draw team name
 			local envTeam = rawget(_G, "team")
@@ -45,7 +45,7 @@ local function draw()
 				local teamInfoName, teamInfo = debug.getupvalue(teamGetName, 1) -- Get the team info table
 
 				if teamInfoName == "TeamInfo" and type(teamInfo) == "table" then
-					local teamData = rawget(teamInfo, P.Team(ply))
+					local teamData = rawget(teamInfo, ply:Team(ply))
 					if teamData and type(teamData) == "table" then
 						local teamName = rawget(teamData, "Name") or "Unknown"
 						surface.SetTextPos(x1 + 18, y1 + 15)
@@ -59,7 +59,7 @@ local function draw()
 			render.SuppressEngineLighting(true)
 			render.MaterialOverride(config.player_mat)
 			local oldR, oldG, oldB = render.GetColorModulation()
-			local r = V.Distance(E.GetPos(LocalPlayer()), E.GetPos(ply)) / config.maxDistance
+			local r = LocalPlayer():GetPos():Distance(ply:GetPos()) / config.maxDistance
 			render.SetColorModulation(1 - (r * r * r), 1, 0)
 			render.SetBlend(config.transparency)
 			lje.util.safe_draw_model(ply, esp.studiorender_flags)
