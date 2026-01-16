@@ -44,6 +44,7 @@ local modulesToLoad = {
 	"esp",
 	"bhop",
 	"screengrab",
+	"freecam",
 }
 
 local modules = {}
@@ -74,7 +75,7 @@ local function loadModule(name)
 		if moduleHooks[hook] then
 			table.insert(moduleHooks[hook], func)
 		else
-			lje.con_print("[AF]" .. name .. " tried to load an invalid hook: " .. hook)
+			lje.con_print("[AF]" .. name .. " tried to use an invalid hook: " .. hook)
 		end
 	end
 end
@@ -93,9 +94,6 @@ printTable(conf.cache)
 --local glui = lje.include("library/glui/main.lua")
 
 hook.pre("ljeutil/render", "antifreeze.ui", function()
-	lje.env.disable_metatables() -- Prevent anyone from detecting us via metatables
-	lje.env.save_random_state() -- Save random state to avoid detection via PRNG state
-
 	--local mx, my = glui.beginInput()
 
 	cam.Start2D()
@@ -130,32 +128,54 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 
 	render.PopRenderTarget()
 	cam.End2D()
-	lje.env.restore_random_state() -- Restore random state
-	lje.env.enable_metatables()
 end)
 
 hook.pre("think", "antifreeze.think", function()
-	lje.env.disable_metatables() -- Prevent anyone from detecting us via metatables
-	lje.env.save_random_state() -- Save random state to avoid detection via PRNG state
-
 	for index, thinkFunction in ipairs(moduleHooks.think) do
 		thinkFunction()
 	end
-
-	lje.env.restore_random_state() -- Restore random state
-	lje.env.enable_metatables()
 end)
 
-hook.pre("CreateMove", "antifreeze.move", function(cmd)
-	lje.env.disable_metatables() -- Prevent anyone from detecting us via metatables
-	lje.env.save_random_state() -- Save random state to avoid detection via PRNG state
 
+local MOVEMENT_BUTTONS = IN_FORWARD + IN_BACK + IN_MOVELEFT + IN_MOVERIGHT + IN_JUMP + IN_DUCK + IN_SPEED + IN_WALK
+
+local function disableMovement(buttons)
+	return bit.band(buttons, bit.bnot(MOVEMENT_BUTTONS))
+end
+
+local freecamDebounce = false --todo: move to a keybind manager/ui toggle
+hook.pre("CreateMove", "antifreeze.move", function(cmd)
 	for index, moveFunction in ipairs(moduleHooks.move) do
 		moveFunction(cmd)
 	end
 
-	lje.env.restore_random_state() -- Restore random state
-	lje.env.enable_metatables()
+	if input.WasKeyPressed(KEY_P) and not freecamDebounce then
+		freecamDebounce = true
+		modules.freecam.toggle()
+	else
+		freecamDebounce = false
+	end
+
+	if modules.freecam.enabled then
+
+		--clear movement so we're not walking off cliffs while freecaming
+		cmd:ClearMovement()
+		cmd:SetButtons(disableMovement(cmd:GetButtons()))
+
+		--recoil isnt aplied while in freecam, removes a detection vector
+		cmd:SetButtons(bit.band(cmd:GetButtons(), bit.bnot(IN_ATTACK + IN_ATTACK2)))
+		cmd:SetViewAngles(modules.freecam.startAngles)
+	end
+end)
+
+hook.pre("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang)
+	if modules.freecam.enabled then
+		cmd:SetMouseX(0)
+		cmd:SetMouseY(0)
+
+		modules.freecam.currentAngles[1] = math.Clamp(modules.freecam.currentAngles[1] + y / 50, -89, 89)
+		modules.freecam.currentAngles[2] = modules.freecam.currentAngles[2] - x / 50
+	end
 end)
 
 lje.con_printf("$cyan{Antifreeze} initialized successfully.")
