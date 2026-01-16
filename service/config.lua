@@ -74,7 +74,7 @@ function config.readFull(configName, loadUserLimits)
 			--  maxESPDistance = {value = 1000, min = 1, max = 30000}
 			--  strafingEnabled = {value = true}
 			for prefName, prefData in pairs(configData) do
-				if type(prefData) == "table" then
+				if type(prefData) == "table" and config.cache[configName][prefName] then
 					if loadUserLimits then
 						config.cache[configName][prefName] = prefData
 					else
