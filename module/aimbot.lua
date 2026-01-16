@@ -1,10 +1,7 @@
-local P = cloned_mts.Player
-local E = cloned_mts.Entity
-local V = cloned_mts.Vector
-local sub = V.__sub
-local add = V.__add
-local mul = V.__mul
-local A = cloned_mts.Angle
+local aimbot = aimbot or {}
+
+aimbot.name = "Aimbot"
+aimbot.description = "Skill issue."
 
 local pid = lje.include("util/pid.lua")
 
@@ -25,7 +22,6 @@ conf.init("aimbot", {
 })
 local config = conf.read("aimbot")
 
-local aimbot = {}
 aimbot.target = nil
 -- integrals aren't used, because of steady state error not being an issue in aimbot
 aimbot.pitch_pid = pid.new(config.pitchResponseP, config.pitchResponseD, config.pitchResponseI, -360, 360)
@@ -65,30 +61,30 @@ local function draw()
 		local qualifiedPlayers = {}
 		for _, ply in ipairs(player.GetAll()) do
 			if
-				(not E.__eq(ply, LocalPlayer()))
-				and V.Distance(E.GetPos(LocalPlayer()), E.GetPos(ply)) <= config.minDistance
-				and P.Alive(ply)
+				ply ~= LocalPlayer()
+				and LocalPlayer():GetPos():Distance(ply:GetPos()) <= config.min_distance
+				and ply:Alive()
 			then
 				table.insert(qualifiedPlayers, ply)
 			end
 		end
 
 		if #qualifiedPlayers > 0 then
-			local aimVectorForward = P.GetAimVector(LocalPlayer())
+			local aimVectorForward = LocalPlayer():GetAimVector()
 			table.sort(qualifiedPlayers, function(a, b)
-				local distA = V.Distance(E.GetPos(LocalPlayer()), E.GetPos(a))
-				local distB = V.Distance(E.GetPos(LocalPlayer()), E.GetPos(b))
+				local distA = LocalPlayer():GetPos():Distance(a:GetPos())
+				local distB = LocalPlayer():GetPos():Distance(b:GetPos())
 
 				-- Check dot product to also factor in who we're aiming at
-				local toA = E.GetPos(a)
-				V.Sub(toA, P.GetShootPos(LocalPlayer()))
-				V.Normalize(toA)
-				local dotA = V.Dot(aimVectorForward, toA)
+				local toA = a:GetPos()
+				toA:Sub(LocalPlayer():GetShootPos())
+				toA:Normalize()
+				local dotA = aimVectorForward:Dot(toA)
 
-				local toB = E.GetPos(b)
-				V.Sub(toB, P.GetShootPos(LocalPlayer()))
-				V.Normalize(toB)
-				local dotB = V.Dot(aimVectorForward, toB)
+				local toB = b:GetPos()
+				toB:Sub(LocalPlayer():GetShootPos())
+				toB:Normalize()
+				local dotB = aimVectorForward:Dot(toB)
 
 				distA = distA * (1 - dotA)
 				distB = distB * (1 - dotB)
@@ -99,22 +95,24 @@ local function draw()
 		end
 	end
 
-	if aimbot.target and P.Alive(aimbot.target) then
+	if aimbot.target and aimbot.target:Alive() then
 		local lp = LocalPlayer()
-		local targetPos = E.GetBonePosition(aimbot.target, E.GetHitBoxBone(aimbot.target, 0, 0))
-		local selfVelPredict = mul(E.GetVelocity(lp), config.selfVelocityCompensation)
-		targetPos = sub(targetPos, selfVelPredict)
 
-		local targetVelPredict = mul(E.GetVelocity(aimbot.target), config.targetVelocityCompensation)
-		targetPos = add(targetPos, targetVelPredict)
+		local targetPos = aimbot.target:GetBonePosition(aimbot.target:GetHitBoxBone(0, 0))
 
-		local startPos = P.GetShootPos(lp)
-		local aimAngle = (sub(targetPos, startPos)):Angle()
+		local selfVelPredict = lp:GetVelocity() * config.self_velocity_compensation
+		targetPos = targetPos - selfVelPredict
+
+		local targetVelPredict = aimbot.target:GetVelocity() * config.target_velocity_compensation
+		targetPos = targetPos + targetVelPredict
+
+		local startPos = lp:GetShootPos()
+		local aimAngle = (targetPos - startPos):Angle()
 
 		-- compute PID outputs
-		local currentViewAngles = E.EyeAngles(lp)
-		local currentPitch, currentYaw, _ = A.Unpack(currentViewAngles)
-		local pitchTarget, yawTarget, _ = A.Unpack(aimAngle)
+		local currentViewAngles = lp:EyeAngles()
+		local currentPitch, currentYaw, _ = currentViewAngles:Unpack()
+		local pitchTarget, yawTarget, _ = aimAngle:Unpack()
 		currentPitch = normalizeAngle(currentPitch)
 		currentYaw = normalizeAngle(currentYaw)
 		pitchTarget = normalizeAngle(pitchTarget)
@@ -122,9 +120,14 @@ local function draw()
 
 		local pitchOutput = aimbot.pitch_pid:compute(pitchTarget, currentPitch, dt)
 		local yawOutput = aimbot.yaw_pid:compute(yawTarget, currentYaw, dt)
-		A.SetUnpacked(currentViewAngles, currentPitch + pitchOutput * dt, currentYaw + yawOutput * dt, 0)
-		P.SetEyeAngles(lp, currentViewAngles)
+		currentViewAngles:SetUnpacked(
+			currentViewAngles,
+			currentPitch + pitchOutput * dt,
+			currentYaw + yawOutput * dt,
+			0
+		)
+		lp:SetEyeAngles(lp, currentViewAngles)
 	end
 end
 
-return aimbot, {draw = draw}
+return aimbot, { draw = draw }
