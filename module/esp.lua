@@ -18,7 +18,7 @@ local function draw()
 		if
 			ply:IsValid()
 			and ply ~= LocalPlayer()
-			and LocalPlayer():GetPos():Distance(ply:GetPos()) <= esp.max_distance
+			and LocalPlayer():GetPos():Distance(ply:GetPos()) <= config.maxDistance
 			and ply:Alive()
 		then
 			local plyPos = ply:GetBonePosition(ply:GetHitBoxBone(0, 0))
