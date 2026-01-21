@@ -1,9 +1,10 @@
 local lje = lje or {}
-local p = cloned_mts.Player
 
 local environment = lje.env.get()
 local af = af or {}
 environment.af = af
+
+local glui = glui
 
 -- Hooks are always disabled during the execution of this script.
 -- They re-enable as soon as this script finishes.
@@ -39,11 +40,23 @@ local function toggleValue(value, enabled)
 	return false
 end
 
+local conf = lje.require("service/config.lua")
+conf.init("main", {
+	enabledModules = { value = {
+		esp = true,
+		aimbot = true,
+		bhop = true,
+		freecam = false,
+	} },
+	keybinds = { value = {} },
+})
+local config = conf.read("main")
+
 local modulesToLoad = {
 	"aimbot",
 	"esp",
 	"bhop",
-	"screengrab",
+	"antiscreengrab", --doesnt function like a normal module, just for gui hints
 	"freecam",
 }
 
@@ -84,17 +97,15 @@ for idx, moduleName in ipairs(modulesToLoad) do
 	loadModule(moduleName)
 end
 
-printTable(modules)
-printTable(moduleHooks)
+--printTable(modules)
+--printTable(moduleHooks)
 
 local conf = lje.require("service/config.lua")
 
 printTable(conf.cache)
 
---local glui = lje.include("library/glui/main.lua")
-
 hook.pre("ljeutil/render", "antifreeze.ui", function()
-	--local mx, my = glui.beginInput()
+	local mx, my = glui.beginInput()
 
 	cam.Start2D()
 	render.PushRenderTarget(lje.util.rendertarget)
@@ -106,14 +117,14 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	local curY = 30
 	if modules.aimbot.target then
 		surface.SetTextPos(10, curY)
-		surface.DrawText("Aimbot Target: " .. p.Nick(modules.aimbot.target))
+		surface.DrawText("Aimbot Target: " .. modules.aimbot.target:Nick())
 		curY = curY + 20
 	end
 
-	if modules.screengrab.isScreengrabRecent() then
+	if modules.antiscreengrab.isScreengrabRecent() then
 		surface.SetTextPos(10, curY)
 		surface.SetTextColor(255, math.sin(SysTime() * 15) * 127 + 128, 0, 255)
-		surface.DrawText(string.format("Screengrabbed %.1f seconds ago!", modules.screengrab.timeSinceScreengrab()))
+		surface.DrawText(string.format("Screengrabbed %.1f seconds ago!", modules.antiscreengrab.timeSinceScreengrab()))
 		curY = curY + 20
 	end
 
@@ -121,6 +132,17 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	surface.SetTextColor(0, 255, 0, 255)
 	surface.DrawText(string.format("GC Memory: %d B", lje.gc.get_total()))
 	curY = curY + 20
+
+	glui.draw.beginWindow("mainWindow", "Utility Mod", 10, curY, 400, 600)
+	local menuY = -10
+	for module, data in pairs(conf.cache) do
+		menuY = menuY + 20
+		glui.draw.label(module, 10, menuY)
+		local id = "configmenu." .. tostring(module) .. ".enabled"
+		menuY = menuY + 20
+		config.enabledModules[module] = glui.draw.checkbox(id, "enabled", 20, menuY, nil, nil)
+	end
+	glui.draw.endWindow()
 
 	for index, renderFunction in ipairs(moduleHooks.draw) do
 		renderFunction()
@@ -135,7 +157,6 @@ hook.pre("think", "antifreeze.think", function()
 		thinkFunction()
 	end
 end)
-
 
 local MOVEMENT_BUTTONS = IN_FORWARD + IN_BACK + IN_MOVELEFT + IN_MOVERIGHT + IN_JUMP + IN_DUCK + IN_SPEED + IN_WALK
 
@@ -157,7 +178,6 @@ hook.pre("CreateMove", "antifreeze.move", function(cmd)
 	end
 
 	if modules.freecam.enabled then
-
 		--clear movement so we're not walking off cliffs while freecaming
 		cmd:ClearMovement()
 		cmd:SetButtons(disableMovement(cmd:GetButtons()))
