@@ -5,8 +5,8 @@ aimbot.description = "Skill issue."
 
 local pid = lje.include("util/pid.lua")
 
-local conf = lje.require("service/config.lua")
-conf.init("aimbot", {
+local config = lje.require("service/config.lua")
+config.init("aimbot", {
 	minDistance = { value = 1000, min = 0, max = 30000 },
 
 	pitchResponseP = { value = 35, min = -180, max = 180 },
@@ -20,12 +20,23 @@ conf.init("aimbot", {
 	selfVelocityCompensation = { value = 0.028, min = 0, max = 0.1 },
 	targetVelocityCompensation = { value = 0.017, min = 0, max = 0.1 },
 })
-local config = conf.read("aimbot")
 
 aimbot.target = nil
 -- integrals aren't used, because of steady state error not being an issue in aimbot
-aimbot.pitch_pid = pid.new(config.pitchResponseP, config.pitchResponseD, config.pitchResponseI, -360, 360)
-aimbot.yaw_pid = pid.new(config.yawResponseP, config.yawResponseD, config.yawResponseI, -360, 360)
+aimbot.pitch_pid = pid.new(
+	config.read("aimbot", "pitchResponseP"),
+	config.read("aimbot", "pitchResponseD"),
+	config.read("aimbot", "pitchResponseI"),
+	-360,
+	360
+)
+aimbot.yaw_pid = pid.new(
+	config.read("aimbot", "yawResponseP"),
+	config.read("aimbot", "yawResponseD"),
+	config.read("aimbot", "yawResponseI"),
+	-360,
+	360
+)
 aimbot.last_time = SysTime()
 
 local function normalizeAngle(ang)
@@ -47,8 +58,8 @@ end
 
 local function draw()
 	-- update pids
-	aimbot.pitch_pid.kp = config.pitchResponseP
-	aimbot.yaw_pid.kp = config.yawResponseP
+	aimbot.pitch_pid.kp = config.read("aimbot", pitchResponseP)
+	aimbot.yaw_pid.kp = config.read("aimbot", yawResponseP)
 	local dt = SysTime() - aimbot.last_time
 	aimbot.last_time = SysTime()
 	if not input.IsKeyDown(aimbot.bind_code) then
@@ -62,7 +73,7 @@ local function draw()
 		for _, ply in ipairs(player.GetAll()) do
 			if
 				ply ~= LocalPlayer()
-				and LocalPlayer():GetPos():Distance(ply:GetPos()) <= config.min_distance
+				and LocalPlayer():GetPos():Distance(ply:GetPos()) <= config.read("aimbot", minDistance)
 				and ply:Alive()
 			then
 				table.insert(qualifiedPlayers, ply)
@@ -100,10 +111,10 @@ local function draw()
 
 		local targetPos = aimbot.target:GetBonePosition(aimbot.target:GetHitBoxBone(0, 0))
 
-		local selfVelPredict = lp:GetVelocity() * config.self_velocity_compensation
+		local selfVelPredict = lp:GetVelocity() * config.read("aimbot", "selfVelocityCompensation")
 		targetPos = targetPos - selfVelPredict
 
-		local targetVelPredict = aimbot.target:GetVelocity() * config.target_velocity_compensation
+		local targetVelPredict = aimbot.target:GetVelocity() * config.read("aimbot", "targetVelocityCompensation")
 		targetPos = targetPos + targetVelPredict
 
 		local startPos = lp:GetShootPos()

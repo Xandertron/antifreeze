@@ -3,11 +3,10 @@ local freecam = freecam or {}
 freecam.name = "Freecam"
 freecam.description = "Detach from your body, and fly through walls."
 
-local conf = lje.require("service/config.lua")
-conf.init("freecam", {
+local config = lje.require("service/config.lua")
+config.init("freecam", {
 	camSpeed = { value = 500, min = 0, max = 2000 },
 })
-local config = conf.read("freecam")
 
 freecam.currentPosition = Vector()
 freecam.currentAngles = Angle()
@@ -19,34 +18,28 @@ local function lerp(a, b, t)
 	return a + (b - a) * t
 end
 
-function freecam.start()
+function freecam.restart()
 	freecam.currentPosition = LocalPlayer():GetPos() + Vector(0, 0, 64) -- Starts at eye level
 	freecam.lerpTargetPosition = freecam.currentPosition
-	freecam.lerpFOV = config.FOV
+	freecam.lerpFOV = config.get("freecam", "FOV")
 	freecam.startAngles = LocalPlayer():EyeAngles()
 	freecam.currentAngles = Angle(LocalPlayer():EyeAngles())
-	freecam.enabled = true
 end
 
-function freecam.stop()
-	freecam.enabled = false
-end
-
-function freecam.toggle()
-	if freecam.enabled then
-		freecam.stop()
-	else
-		freecam.start()
-	end
-end
+freecam.initialized = false
 
 hook.pre("Think", "antifreeze.freecam.movement", function()
 	if not freecam.enabled then
+		freecam.initialized = false
 		return
+	else
+		if freecam.initialized == false then
+			freecam.restart()
+			freecam.initialized = true
+		end
 	end
-
 	local ft = FrameTime()
-	local speed = config.camSpeed * ft
+	local speed = config.get("freecam", "camSpeed") * ft
 
 	if input.IsKeyDown(KEY_LCONTROL) then
 		speed = speed / 10

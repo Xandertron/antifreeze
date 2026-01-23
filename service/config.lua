@@ -49,6 +49,7 @@ espConfig = {
 ]]
 
 local config = config or {}
+config.data = config.data or {}
 config.cache = config.cache or {} --active data
 local namespace = "antifreeze"
 
@@ -64,8 +65,11 @@ end
 
 --load values from user's config over default values, or load initial values otherwise
 function config.readFull(configName, loadUserLimits)
-	lje.con_print("[AF] Loading config: " .. configName)
 	if config.cache[configName] then
+		return config.cache[configName]
+	end
+	lje.con_print("[AF] Loading config: " .. configName)
+	if config.data[configName] then
 		local jsonData = lje.data.read(string.format("%s_%s_config", namespace, configName))
 		if jsonData then
 			local configData = util.JSONToTable(jsonData)
@@ -83,7 +87,7 @@ function config.readFull(configName, loadUserLimits)
 				end
 			end
 		else
-			lje.con_print("[AF] Using defaults for: " .. configName)
+			lje.con_print("[AF] New config using defaults for: " .. configName)
 			config.save(configName)
 		end
 		return config.cache[configName]
@@ -92,7 +96,7 @@ function config.readFull(configName, loadUserLimits)
 	end
 end
 
---read only values, do not read limits etc.
+--read only values, do not read limits, etc. shallow copy!
 function config.read(configName)
 	local configData = config.readFull(configName)
 	local simpleConfig = {}
@@ -100,6 +104,12 @@ function config.read(configName)
 		simpleConfig[key] = value["value"]
 	end
 	return simpleConfig
+end
+
+function config.get(configName, key)
+	if configName and key and config.cache[configName] and config.cache[configName][key] then
+		return config.cache[configName][key].value
+	end
 end
 
 function config.getTable()
