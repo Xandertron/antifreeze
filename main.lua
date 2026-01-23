@@ -1,10 +1,63 @@
 local lje = lje or {}
-
 local environment = lje.env.get()
-local af = af or {}
-environment.af = af
 
 local glui = glui
+
+local af = af or {}
+
+af.brand = af.brand or {}
+af.brand.watermark = [[
+  /$$$$$$  /$$   /$$ /$$$$$$$$ /$$$$$$ /$$$$$$$$ /$$$$$$$  /$$$$$$$$ /$$$$$$$$ /$$$$$$$$ /$$$$$$$$
+ /$$__  $$| $$$ | $$|__  $$__/|_  $$_/| $$_____/| $$__  $$| $$_____/| $$_____/|_____ $$ | $$_____/
+| $$  \ $$| $$$$| $$   | $$     | $$  | $$      | $$  \ $$| $$      | $$           /$$/ | $$      
+| $$$$$$$$| $$ $$ $$   | $$     | $$  | $$$$$   | $$$$$$$/| $$$$$   | $$$$$       /$$/  | $$$$$   
+| $$__  $$| $$  $$$$   | $$     | $$  | $$__/   | $$__  $$| $$__/   | $$__/      /$$/   | $$__/   
+| $$  | $$| $$\  $$$   | $$     | $$  | $$      | $$  \ $$| $$      | $$        /$$/    | $$      
+| $$  | $$| $$ \  $$   | $$    /$$$$$$| $$      | $$  | $$| $$$$$$$$| $$$$$$$$ /$$$$$$$$| $$$$$$$$
+|__/  |__/|__/  \__/   |__/   |______/|__/      |__/  |__/|________/|________/|________/|________/
+]]
+af.brand.name = "Antifreeze"
+af.brand.color = Color(127, 255, 255)
+af.brand.gluiStyle = {
+	other = {
+		titleHeight = 20,
+		border = col(255, 255, 255, 255),
+		helpText = col(255, 255, 255, 255),
+	},
+
+	text = {
+		normal = col(255, 255, 255, 255),
+		disabled = col(128, 128, 128, 255),
+	},
+
+	button = {
+		frame = col(35, 35, 35, 255),
+		hover = col(50, 50, 50, 255),
+		press = col(80, 80, 80, 255),
+		text = col(215, 215, 215, 255),
+	},
+
+	tab = {
+		frame = col(35, 35, 35, 255),
+		hover = col(50, 50, 50, 255),
+		press = col(80, 80, 80, 255),
+		btn_frame = col(143, 1, 20, 255),
+		text = col(215, 215, 215, 255),
+	},
+
+	title = {
+		frame = col(82, 146, 146, 127),
+		hover = col(50, 50, 50, 255),
+		press = col(80, 80, 80, 255),
+		text = col(215, 215, 215, 255),
+	},
+
+	window = {
+		frame = col(127, 255, 255, 127),
+	},
+}
+
+environment.af = af
 
 -- Hooks are always disabled during the execution of this script.
 -- They re-enable as soon as this script finishes.
@@ -40,8 +93,8 @@ local function toggleValue(value, enabled)
 	return false
 end
 
-local conf = lje.require("service/config.lua")
-conf.init("main", {
+local config = lje.require("service/config.lua")
+config.init("main", {
 	enabledModules = { value = {
 		esp = true,
 		aimbot = true,
@@ -50,7 +103,6 @@ conf.init("main", {
 	} },
 	keybinds = { value = {} },
 })
-local config = conf.read("main")
 
 local modulesToLoad = {
 	"aimbot",
@@ -69,24 +121,26 @@ local moduleHooks = {
 	move = {},
 }
 
-local function loadModule(name)
-	lje.con_print("[AF] Loading module: " .. name)
-	data, hooks = lje.include("module/" .. name .. ".lua")
+local function loadModule(moduleName)
+	lje.con_print("[AF] Loading module: " .. moduleName)
+	data, hooks = unpack({ lje.include("module/" .. moduleName .. ".lua") })
 
 	if data == nil then
-		lje.con_print("[AF] Failed to load module: " .. name)
+		lje.con_print("[AF] Failed to load module: " .. moduleName)
 		return
 	end
 
-	modules[name] = data
+	modules[moduleName] = data
+	modules[moduleName].enabled = data.enabled or false
 
 	if hooks == nil then
+		lje.con_print("[AF] No hooks!")
 		return
 	end
 
 	for hook, func in pairs(hooks) do
 		if moduleHooks[hook] then
-			table.insert(moduleHooks[hook], func)
+			moduleHooks[hook][moduleName] = func
 		else
 			lje.con_print("[AF]" .. name .. " tried to use an invalid hook: " .. hook)
 		end
@@ -97,12 +151,14 @@ for idx, moduleName in ipairs(modulesToLoad) do
 	loadModule(moduleName)
 end
 
---printTable(modules)
---printTable(moduleHooks)
+lje.con_print("modules:")
+printTable(modules)
+lje.con_print("module hooks:")
+printTable(moduleHooks)
+lje.con_print("config cache:")
+printTable(config.cache)
 
-local conf = lje.require("service/config.lua")
-
-printTable(conf.cache)
+local acculmativeMenuSize = 0
 
 hook.pre("ljeutil/render", "antifreeze.ui", function()
 	local mx, my = glui.beginInput()
@@ -111,10 +167,11 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	render.PushRenderTarget(lje.util.rendertarget)
 	surface.SetFont("ChatFont")
 	surface.SetTextPos(10, 10)
-	surface.SetTextColor(0, 255, 0, 255)
+	surface.SetTextColor(af.brand.color)
 	surface.DrawText("Antifreeze - LJE")
 
 	local curY = 30
+
 	if modules.aimbot.target then
 		surface.SetTextPos(10, curY)
 		surface.DrawText("Aimbot Target: " .. modules.aimbot.target:Nick())
@@ -123,29 +180,58 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 
 	if modules.antiscreengrab.isScreengrabRecent() then
 		surface.SetTextPos(10, curY)
-		surface.SetTextColor(255, math.sin(SysTime() * 15) * 127 + 128, 0, 255)
+		surface.SetTextColor(255, math.sin(SysTime() * 15) * 127 + 128, 255, 255)
 		surface.DrawText(string.format("Screengrabbed %.1f seconds ago!", modules.antiscreengrab.timeSinceScreengrab()))
 		curY = curY + 20
 	end
 
 	surface.SetTextPos(10, curY)
-	surface.SetTextColor(0, 255, 0, 255)
+	surface.SetTextColor(af.brand.color)
 	surface.DrawText(string.format("GC Memory: %d B", lje.gc.get_total()))
 	curY = curY + 20
 
-	glui.draw.beginWindow("mainWindow", "Utility Mod", 10, curY, 400, 600)
+	glui.style(af.brand.gluiStyle)
+	glui.draw.beginWindow("mainWindow", "Utility Mod", 10, curY, 400, acculmativeMenuSize)
 	local menuY = -10
-	for module, data in pairs(conf.cache) do
-		menuY = menuY + 20
-		glui.draw.label(module, 10, menuY)
-		local id = "configmenu." .. tostring(module) .. ".enabled"
-		menuY = menuY + 20
-		config.enabledModules[module] = glui.draw.checkbox(id, "enabled", 20, menuY, nil, nil)
+	for moduleName, data in pairs(config.cache) do
+		if modules[moduleName] then
+			local id = "configmenu." .. tostring(moduleName) .. ".toggle"
+			menuY = menuY + 20
+			local checked = glui.draw.checkbox(id, moduleName, 20, menuY, nil, nil)
+			modules[moduleName].enabled = checked
+			config.cache["main"].enabledModules[moduleName] = checked
+			for optionName, optionData in pairs(config.cache[moduleName]) do
+				local id = "configmenu." .. tostring(moduleName) .. "." .. optionName
+				if type(optionData.value) == "boolean" then
+					menuY = menuY + 20
+					config.cache[moduleName][optionName].value = glui.draw.checkbox(id, optionName, 40, menuY, nil, nil)
+				elseif type(optionData.value) == "number" then
+					menuY = menuY + 20
+					local sliderValue = glui.draw.slider(
+						id,
+						40,
+						menuY,
+						200,
+						16,
+						optionData.min or 0,
+						optionData.max or 100,
+						optionData.value
+					)
+					config.cache[moduleName][optionName].value = sliderValue
+					menuY = menuY + 20
+					glui.draw.label(optionName .. ": " .. tostring(math.ceil(sliderValue * 100) / 100), 40, menuY)
+				end
+			end
+		end
 	end
+	menuY = menuY + 40 + 10
+	acculmativeMenuSize = menuY
 	glui.draw.endWindow()
 
-	for index, renderFunction in ipairs(moduleHooks.draw) do
-		renderFunction()
+	for moduleName, renderFunction in pairs(moduleHooks.draw) do
+		if modules[moduleName].enabled then
+			renderFunction()
+		end
 	end
 
 	render.PopRenderTarget()
@@ -153,8 +239,10 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 end)
 
 hook.pre("think", "antifreeze.think", function()
-	for index, thinkFunction in ipairs(moduleHooks.think) do
-		thinkFunction()
+	for moduleName, thinkFunction in pairs(moduleHooks.think) do
+		if modules[moduleName].enabled then
+			thinkFunction()
+		end
 	end
 end)
 
@@ -164,17 +252,12 @@ local function disableMovement(buttons)
 	return bit.band(buttons, bit.bnot(MOVEMENT_BUTTONS))
 end
 
-local freecamDebounce = false --todo: move to a keybind manager/ui toggle
+--todo: keybind manager/ui toggle
 hook.pre("CreateMove", "antifreeze.move", function(cmd)
-	for index, moveFunction in ipairs(moduleHooks.move) do
-		moveFunction(cmd)
-	end
-
-	if input.WasKeyPressed(KEY_P) and not freecamDebounce then
-		freecamDebounce = true
-		modules.freecam.toggle()
-	else
-		freecamDebounce = false
+	for moduleName, moveFunction in pairs(moduleHooks.move) do
+		if modules[moduleName].enabled then
+			moveFunction(cmd)
+		end
 	end
 
 	if modules.freecam.enabled then
@@ -197,6 +280,8 @@ hook.pre("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang
 		modules.freecam.currentAngles[2] = modules.freecam.currentAngles[2] - x / 50
 	end
 end)
+
+lje.con_printf("$cyan{\n" .. af.brand.watermark .. "\n}")
 
 lje.con_printf("$cyan{Antifreeze} initialized successfully.")
 
