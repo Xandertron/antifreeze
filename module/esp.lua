@@ -1,6 +1,6 @@
 local esp = esp or {}
 
-esp.name = "Freecam"
+esp.name = "ESP"
 esp.description = "See the living beyond walls."
 
 local config = lje.require("service/config.lua")

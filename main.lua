@@ -1,9 +1,6 @@
-local lje = lje or {}
-local environment = lje.env.get()
-
-local glui = glui
-
 local af = af or {}
+
+af.debug = false --debug prints, etc
 
 af.brand = af.brand or {}
 af.brand.watermark = [[
@@ -18,7 +15,7 @@ af.brand.watermark = [[
 ]]
 af.brand.name = "Antifreeze"
 af.brand.color = Color(127, 255, 255)
-af.brand.gluiStyle = {
+--[[af.brand.gluiStyle = {
 	other = {
 		titleHeight = 20,
 		border = col(255, 255, 255, 255),
@@ -55,9 +52,22 @@ af.brand.gluiStyle = {
 	window = {
 		frame = col(127, 255, 255, 127),
 	},
-}
+}]]
+--
+
+local lje = lje or {}
+local environment = lje.env.get()
 
 environment.af = af
+
+af.concmdAdd = lje.include("service/concommand.lua")
+
+af.concmdAdd("lua_run_lje", "Runs lua in LJE's enviroment", 0, function(_, _, _, argsStr)
+	local func = lje.func.compile(argsStr)
+	if func then
+		func()
+	end
+end)
 
 -- Hooks are always disabled during the execution of this script.
 -- They re-enable as soon as this script finishes.
@@ -151,12 +161,14 @@ for idx, moduleName in ipairs(modulesToLoad) do
 	loadModule(moduleName)
 end
 
-lje.con_print("modules:")
-printTable(modules)
-lje.con_print("module hooks:")
-printTable(moduleHooks)
-lje.con_print("config cache:")
-printTable(config.cache)
+if af.debug then
+	lje.con_print("modules:")
+	printTable(modules)
+	lje.con_print("module hooks:")
+	printTable(moduleHooks)
+	lje.con_print("config cache:")
+	printTable(config.cache)
+end
 
 local acculmativeMenuSize = 0
 
@@ -190,22 +202,23 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	surface.DrawText(string.format("GC Memory: %d B", lje.gc.get_total()))
 	curY = curY + 20
 
-	glui.style(af.brand.gluiStyle)
+	--glui.style(af.brand.gluiStyle)
 	glui.draw.beginWindow("mainWindow", "Utility Mod", 10, curY, 400, acculmativeMenuSize)
-	local menuY = -10
+	local menuY = 10
+	local showSliders = glui.draw.checkbox("config.sliders.toggle", "Show sliders", 20, menuY, nil, nil)
 	for moduleName, data in pairs(config.cache) do
 		if modules[moduleName] then
-			local id = "configmenu." .. tostring(moduleName) .. ".toggle"
+			local id = "config." .. tostring(moduleName) .. ".toggle"
 			menuY = menuY + 20
-			local checked = glui.draw.checkbox(id, moduleName, 20, menuY, nil, nil)
+			local checked = glui.draw.checkbox(id, modules[moduleName].name or moduleName, 20, menuY, nil, nil)
 			modules[moduleName].enabled = checked
 			config.cache["main"].enabledModules[moduleName] = checked
 			for optionName, optionData in pairs(config.cache[moduleName]) do
-				local id = "configmenu." .. tostring(moduleName) .. "." .. optionName
+				local id = "config." .. tostring(moduleName) .. "." .. optionName
 				if type(optionData.value) == "boolean" then
 					menuY = menuY + 20
 					config.cache[moduleName][optionName].value = glui.draw.checkbox(id, optionName, 40, menuY, nil, nil)
-				elseif type(optionData.value) == "number" then
+				elseif type(optionData.value) == "number" and showSliders then
 					menuY = menuY + 20
 					local sliderValue = glui.draw.slider(
 						id,
@@ -282,7 +295,5 @@ hook.pre("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang
 end)
 
 lje.con_printf("$cyan{\n" .. af.brand.watermark .. "\n}")
-
-lje.con_printf("$cyan{Antifreeze} initialized successfully.")
 
 return af
