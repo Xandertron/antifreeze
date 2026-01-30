@@ -5,7 +5,7 @@ aimbot.description = "Skill issue."
 
 local pid = lje.include("util/pid.lua")
 
-local config = lje.require("service/config.lua")
+local config = af.config
 config.init("aimbot", {
 	minDistance = { value = 1000, min = 0, max = 30000 },
 

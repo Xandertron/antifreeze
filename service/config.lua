@@ -112,6 +112,29 @@ function config.get(configName, key)
 	end
 end
 
+function config.set(configName, key, newValue)
+	local conf = config.cache[configName]
+	if key and newValue ~= nil and conf and conf[key] and conf[key].value ~= nil then
+		local value = conf[key].value
+		if type(value) ~= type(newValue) then
+			return value
+		end
+
+		if type(value) == "number" then
+			local max = conf[key].max
+			local min = conf[key].min
+			if max and newValue > max then
+				newValue = max
+			elseif min and newValue < min then
+				newValue = min
+			end
+		end
+		
+		conf[key].value = newValue
+		return newValue
+	end
+end
+
 function config.getTable()
 	return config.cache
 end

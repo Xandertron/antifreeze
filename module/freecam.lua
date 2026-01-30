@@ -3,7 +3,7 @@ local freecam = freecam or {}
 freecam.name = "Freecam"
 freecam.description = "Detach from your body, and fly through walls."
 
-local config = lje.require("service/config.lua")
+local config = af.config
 config.init("freecam", {
 	camSpeed = { value = 500, min = 0, max = 2000 },
 })

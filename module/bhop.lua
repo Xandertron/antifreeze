@@ -3,7 +3,7 @@ local bhop = bhop or {}
 bhop.name = "Bunny Hop"
 bhop.description = "Jumps on contact with ground, while jumping. Like a bunny."
 
-local config = lje.require("service/config.lua")
+local config = af.config
 config.init("bhop", {
 	strafingEnabled = { value = false },
 	strafeTurnSpeed = { value = 1, min = 0, max = 10 },

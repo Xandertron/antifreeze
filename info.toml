@@ -1,9 +1,8 @@
 [script]
 name = "antifreeze"
-version = "1.0.0"
+version = "1.1.0"
 author = "Xandertron"
-url = "https://github.com/Xandertron/antifreeze" # Not required, in fact not even used, but can be helpful for automation/documentation.
+url = "https://github.com/Xandertron/antifreeze"
 dependencies = [
-    "Eyoko1.ljeutil",
-    "pngmeow.glui"
+    "Eyoko1.ljeutil"
 ]

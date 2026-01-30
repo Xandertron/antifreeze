@@ -2,7 +2,11 @@ local af = af or {}
 
 af.debug = false --debug prints, etc
 
-af.brand = af.brand or {}
+af.info = {}
+af.info.version = "1.1.0"
+af.info.name = "Antifreeze"
+
+af.brand = {}
 af.brand.watermark = [[
   /$$$$$$  /$$   /$$ /$$$$$$$$ /$$$$$$ /$$$$$$$$ /$$$$$$$  /$$$$$$$$ /$$$$$$$$ /$$$$$$$$ /$$$$$$$$
  /$$__  $$| $$$ | $$|__  $$__/|_  $$_/| $$_____/| $$__  $$| $$_____/| $$_____/|_____ $$ | $$_____/
@@ -55,53 +59,10 @@ af.brand.color = Color(127, 255, 255)
 }]]
 --
 
-local lje = lje or {}
-local environment = lje.env.get()
+lje.include("service/concommand.lua")
 
-environment.af = af
-
-af.concmdAdd = lje.include("service/concommand.lua")
-
-af.concmdAdd("lua_run_lje", "Runs lua in LJE's enviroment", 0, function(_, _, _, argsStr)
-	local func = lje.func.compile(argsStr)
-	if func then
-		func()
-	end
-end)
-
--- Hooks are always disabled during the execution of this script.
--- They re-enable as soon as this script finishes.
-
-function printTable(t, indent, seen)
-	indent = indent or 0
-	seen = seen or {}
-
-	if seen[t] then
-		lje.con_print(string.rep("  ", indent) .. "*cycle*")
-		return
-	end
-	seen[t] = true
-
-	for k, v in pairs(t) do
-		local prefix = string.rep("  ", indent) .. tostring(k) .. ": "
-		if type(v) == "table" then
-			lje.con_print(prefix .. "{")
-			printTable(v, indent + 1, seen)
-			lje.con_print(string.rep("  ", indent) .. "}")
-		else
-			lje.con_print(prefix .. tostring(v))
-		end
-	end
-end
-
-local function toggleValue(value, enabled)
-	if enabled ~= nil then
-		return enabled
-	else
-		return not value
-	end
-	return false
-end
+local modules = {}
+af.modules = modules
 
 local config = lje.require("service/config.lua")
 config.init("main", {
@@ -114,6 +75,8 @@ config.init("main", {
 	keybinds = { value = {} },
 })
 
+af.config = config
+
 local modulesToLoad = {
 	"aimbot",
 	"esp",
@@ -121,8 +84,6 @@ local modulesToLoad = {
 	"antiscreengrab", --doesnt function like a normal module, just for gui hints
 	"freecam",
 }
-
-local modules = {}
 
 --hooks for modules to supply
 local moduleHooks = {
@@ -161,6 +122,130 @@ for idx, moduleName in ipairs(modulesToLoad) do
 	loadModule(moduleName)
 end
 
+local function switchModule(moduleName, mode)
+	if moduleName and af.modules[moduleName] then
+		if mode == "enable" then
+			af.modules[moduleName].enabled = true
+		elseif mode == "disable" then
+			af.modules[moduleName].enabled = false
+		elseif mode == "toggle" then
+			af.modules[moduleName].enabled = not af.modules[moduleName].enabled
+		end
+	else
+		print("That module doesnt exist!")
+	end
+end
+
+local function coerce(str)
+	if type(str) ~= "string" then
+		return str
+	end
+
+	local lower = string.lower(str)
+
+	if lower == "true" then
+		return true
+	end
+	if lower == "false" then
+		return false
+	end
+	if lower == "nil" then
+		return nil
+	end
+
+	local num = tonumber(str)
+	if num ~= nil then
+		return num
+	end
+
+	return str
+end
+
+function getKeys(tbl)
+	local keys = {}
+	local id = 1
+
+	for k, v in pairs(tbl) do
+		keys[id] = k
+		id = id + 1
+	end
+
+	return keys
+end
+
+af.commands = lje.include("service/commands.lua")
+af.commands.tree = {
+	info = function()
+		print(string.format("%s (version %s)", af.info.name, af.info.version))
+	end,
+	modules = {
+		toggle = function(moduleName)
+			switchModule(moduleName, "toggle")
+		end,
+
+		enable = function(moduleName)
+			switchModule(moduleName, "enable")
+		end,
+
+		disable = function(moduleName)
+			switchModule(moduleName, "disable")
+		end,
+
+		["config"] = {
+			set = function(moduleName, key, value)
+				local value = coerce(value)
+				local ret = config.set(moduleName, key, value)
+				if type(ret) ~= type(value) then
+					print("Wrong type, expected: " .. type(ret))
+				elseif ret ~= value and ret and value and type(ret) == "number" then
+					print("Number was either too large or too small, please try again")
+				end
+			end,
+
+			list = function(moduleName)
+				if not moduleName then
+					print(
+						string.format("Configurable modules available:\n%s", table.concat(getKeys(config.cache), ", "))
+					)
+				else
+					local output = ""
+					for optionName, optionData in pairs(config.cache[moduleName]) do
+						output = output .. string.format("\n%s: %s", optionName, tostring(optionData.value))
+					end
+					print(string.format("Options available:%s", output))
+				end
+			end,
+		},
+	},
+}
+af.commands.attachHelp(af.commands.tree, {})
+
+af.concmdAdd("antifreeze", "Main Antifreeze command", 0, function(_, _, args, argsStr)
+	af.commands.dispatch(af.commands.tree, args)
+end)
+
+function printTable(t, indent, seen)
+	indent = indent or 0
+	seen = seen or {}
+
+	if seen[t] then
+		lje.con_print(string.rep("  ", indent) .. "*cycle*")
+		return
+	end
+	seen[t] = true
+
+	for k, v in pairs(t) do
+		local prefix = string.rep("  ", indent) .. tostring(k) .. ": "
+		if type(v) == "table" then
+			lje.con_print(prefix .. "{")
+			printTable(v, indent + 1, seen)
+			lje.con_print(string.rep("  ", indent) .. "}")
+		else
+			lje.con_print(prefix .. tostring(v))
+		end
+	end
+end
+
 if af.debug then
 	lje.con_print("modules:")
 	printTable(modules)
@@ -170,10 +255,10 @@ if af.debug then
 	printTable(config.cache)
 end
 
-local acculmativeMenuSize = 0
+--local acculmativeMenuSize = 0
 
 hook.pre("ljeutil/render", "antifreeze.ui", function()
-	local mx, my = glui.beginInput()
+	--local mx, my = glui.beginInput()
 
 	cam.Start2D()
 	render.PushRenderTarget(lje.util.rendertarget)
@@ -203,14 +288,14 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	curY = curY + 20
 
 	--glui.style(af.brand.gluiStyle)
-	glui.draw.beginWindow("mainWindow", "Utility Mod", 10, curY, 400, acculmativeMenuSize)
+	--[[glui.draw.beginWindow("mainWindow", "Utility Mod", 10, curY, 400, acculmativeMenuSize)
 	local menuY = 10
 	local showSliders = glui.draw.checkbox("config.sliders.toggle", "Show sliders", 20, menuY, nil, nil)
 	for moduleName, data in pairs(config.cache) do
 		if modules[moduleName] then
 			local id = "config." .. tostring(moduleName) .. ".toggle"
 			menuY = menuY + 20
-			local checked = glui.draw.checkbox(id, modules[moduleName].name or moduleName, 20, menuY, nil, nil)
+			local checked = glui.draw.checkbox(id, modules[moduleName].name or moduleName, 20, menuY, nil, nil, modules[moduleName].enabled)
 			modules[moduleName].enabled = checked
 			config.cache["main"].enabledModules[moduleName] = checked
 			for optionName, optionData in pairs(config.cache[moduleName]) do
@@ -240,6 +325,7 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	menuY = menuY + 40 + 10
 	acculmativeMenuSize = menuY
 	glui.draw.endWindow()
+	]]
 
 	for moduleName, renderFunction in pairs(moduleHooks.draw) do
 		if modules[moduleName].enabled then

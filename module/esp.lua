@@ -3,7 +3,7 @@ local esp = esp or {}
 esp.name = "ESP"
 esp.description = "See the living beyond walls."
 
-local config = lje.require("service/config.lua")
+local config = af.config
 config.init("esp", {
 	maxDistance = { value = 15000, min = 0, max = 30000 },
 	transparency = { value = 0.2, min = 0, max = 1 },
