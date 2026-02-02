@@ -24,16 +24,16 @@ config.init("aimbot", {
 aimbot.target = nil
 -- integrals aren't used, because of steady state error not being an issue in aimbot
 aimbot.pitch_pid = pid.new(
-	config.read("aimbot", "pitchResponseP"),
-	config.read("aimbot", "pitchResponseD"),
-	config.read("aimbot", "pitchResponseI"),
+	config.get("aimbot", "pitchResponseP"),
+	config.get("aimbot", "pitchResponseD"),
+	config.get("aimbot", "pitchResponseI"),
 	-360,
 	360
 )
 aimbot.yaw_pid = pid.new(
-	config.read("aimbot", "yawResponseP"),
-	config.read("aimbot", "yawResponseD"),
-	config.read("aimbot", "yawResponseI"),
+	config.get("aimbot", "yawResponseP"),
+	config.get("aimbot", "yawResponseD"),
+	config.get("aimbot", "yawResponseI"),
 	-360,
 	360
 )
@@ -58,8 +58,8 @@ end
 
 local function draw()
 	-- update pids
-	aimbot.pitch_pid.kp = config.read("aimbot", pitchResponseP)
-	aimbot.yaw_pid.kp = config.read("aimbot", yawResponseP)
+	aimbot.pitch_pid.kp = config.get("aimbot", "pitchResponseP")
+	aimbot.yaw_pid.kp = config.get("aimbot", "yawResponseP")
 	local dt = SysTime() - aimbot.last_time
 	aimbot.last_time = SysTime()
 	if not input.IsKeyDown(aimbot.bind_code) then
@@ -73,7 +73,7 @@ local function draw()
 		for _, ply in ipairs(player.GetAll()) do
 			if
 				ply ~= LocalPlayer()
-				and LocalPlayer():GetPos():Distance(ply:GetPos()) <= config.read("aimbot", minDistance)
+				and LocalPlayer():GetPos():Distance(ply:GetPos()) <= config.get("aimbot", "minDistance")
 				and ply:Alive()
 			then
 				table.insert(qualifiedPlayers, ply)
@@ -111,10 +111,10 @@ local function draw()
 
 		local targetPos = aimbot.target:GetBonePosition(aimbot.target:GetHitBoxBone(0, 0))
 
-		local selfVelPredict = lp:GetVelocity() * config.read("aimbot", "selfVelocityCompensation")
+		local selfVelPredict = lp:GetVelocity() * config.get("aimbot", "selfVelocityCompensation")
 		targetPos = targetPos - selfVelPredict
 
-		local targetVelPredict = aimbot.target:GetVelocity() * config.read("aimbot", "targetVelocityCompensation")
+		local targetVelPredict = aimbot.target:GetVelocity() * config.get("aimbot", "targetVelocityCompensation")
 		targetPos = targetPos + targetVelPredict
 
 		local startPos = lp:GetShootPos()

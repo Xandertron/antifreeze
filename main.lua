@@ -68,8 +68,8 @@ local config = lje.require("service/config.lua")
 config.init("main", {
 	enabledModules = { value = {
 		esp = true,
-		aimbot = true,
-		bhop = true,
+		aimbot = false,
+		bhop = false,
 		freecam = false,
 	} },
 	keybinds = { value = {} },
@@ -104,6 +104,11 @@ local function loadModule(moduleName)
 	modules[moduleName] = data
 	modules[moduleName].enabled = data.enabled or false
 
+	local enabledModules = config.get("main", "enabledModules")
+	if enabledModules then
+		modules[moduleName].enabled = enabledModules[moduleName] or false
+	end
+
 	if hooks == nil then
 		lje.con_print("[AF] No hooks!")
 		return
@@ -131,6 +136,9 @@ local function switchModule(moduleName, mode)
 		elseif mode == "toggle" then
 			af.modules[moduleName].enabled = not af.modules[moduleName].enabled
 		end
+		local enabledModules = config.get("main", "enabledModules")
+		enabledModules[moduleName] = af.modules[moduleName].enabled
+		config.set("main", "enabledModules", enabledModules)
 	else
 		print("That module doesnt exist!")
 	end
@@ -258,6 +266,9 @@ end
 --local acculmativeMenuSize = 0
 
 hook.pre("ljeutil/render", "antifreeze.ui", function()
+	if not af.ignoreMainMenu and gui.IsGameUIVisible() then
+		return
+	end
 	--local mx, my = glui.beginInput()
 
 	cam.Start2D()
