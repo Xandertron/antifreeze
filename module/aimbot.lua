@@ -111,6 +111,12 @@ local function draw()
 
 		local targetPos = aimbot.target:GetBonePosition(aimbot.target:GetHitBoxBone(0, 0))
 
+		-- If targets have a model we don't have, bones wont be loaded clientside. We're going to have to
+		-- just use their origin and lift it a little (constant offset since everything uses the error model)
+		if targetPos == aimbot.target:GetPos() then
+			targetPos = aimbot.target:GetPos() + Vector(0, 0, 50)
+		end
+
 		local selfVelPredict = lp:GetVelocity() * config.get("aimbot", "selfVelocityCompensation")
 		targetPos = targetPos - selfVelPredict
 
@@ -132,12 +138,11 @@ local function draw()
 		local pitchOutput = aimbot.pitch_pid:compute(pitchTarget, currentPitch, dt)
 		local yawOutput = aimbot.yaw_pid:compute(yawTarget, currentYaw, dt)
 		currentViewAngles:SetUnpacked(
-			currentViewAngles,
 			currentPitch + pitchOutput * dt,
 			currentYaw + yawOutput * dt,
 			0
 		)
-		lp:SetEyeAngles(lp, currentViewAngles)
+		lp:SetEyeAngles(currentViewAngles)
 	end
 end
 
