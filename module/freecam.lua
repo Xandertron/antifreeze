@@ -1,7 +1,7 @@
 local freecam = freecam or {}
 
 freecam.name = "Freecam"
-freecam.description = "Detach from your body, and fly through walls."
+freecam.description = "Detach from your body, and fly through walls. (Screengrabbable)"
 
 local config = af.config
 config.init("freecam", {
@@ -18,7 +18,7 @@ local function lerp(a, b, t)
 	return a + (b - a) * t
 end
 
-function freecam.restart()
+function freecam.onEnable()
 	freecam.currentPosition = LocalPlayer():GetPos() + Vector(0, 0, 64) -- Starts at eye level
 	freecam.lerpTargetPosition = freecam.currentPosition
 	freecam.lerpFOV = config.get("freecam", "FOV")
@@ -26,17 +26,9 @@ function freecam.restart()
 	freecam.currentAngles = Angle(LocalPlayer():EyeAngles())
 end
 
-freecam.initialized = false
-
 hook.pre("Think", "antifreeze.freecam.movement", function()
 	if not freecam.enabled then
-		freecam.initialized = false
 		return
-	else
-		if freecam.initialized == false then
-			freecam.restart()
-			freecam.initialized = true
-		end
 	end
 	local ft = FrameTime()
 	local speed = config.get("freecam", "camSpeed") * ft

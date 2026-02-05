@@ -83,6 +83,7 @@ local modulesToLoad = {
 	"bhop",
 	"antiscreengrab", --doesnt function like a normal module, just for gui hints
 	"freecam",
+	"fullbright",
 }
 
 --hooks for modules to supply
@@ -127,21 +128,43 @@ for idx, moduleName in ipairs(modulesToLoad) do
 	loadModule(moduleName)
 end
 
-local function switchModule(moduleName, mode)
-	if moduleName and af.modules[moduleName] then
-		if mode == "enable" then
-			af.modules[moduleName].enabled = true
-		elseif mode == "disable" then
-			af.modules[moduleName].enabled = false
-		elseif mode == "toggle" then
-			af.modules[moduleName].enabled = not af.modules[moduleName].enabled
-		end
-		local enabledModules = config.get("main", "enabledModules")
-		enabledModules[moduleName] = af.modules[moduleName].enabled
-		config.set("main", "enabledModules", enabledModules)
-	else
+local function switchModule(moduleName, switch)
+	if not (moduleName and af.modules[moduleName]) then
 		print("That module doesnt exist!")
+		return
 	end
+
+	local moduleTable = af.modules[moduleName]
+	local state = moduleTable.enabled or false
+
+	-- toggle if switch is nil
+	if switch == nil then
+		switch = not state
+	end
+
+	-- no state change, nothing to do
+	if state == switch then
+		return
+	end
+
+	-- rising and falling edge
+	if not state and switch then
+		if moduleTable.onEnable then
+			moduleTable.onEnable()
+		end
+	elseif state and not switch then
+		if moduleTable.onDisable then
+			moduleTable.onDisable()
+		end
+	end
+
+	-- update runtime state
+	moduleTable.enabled = switch
+
+	-- persist state
+	local enabledModules = config.get("main", "enabledModules")
+	enabledModules[moduleName] = switch
+	config.set("main", "enabledModules", enabledModules)
 end
 
 local function coerce(str)
@@ -188,15 +211,15 @@ af.commands.tree = {
 	end,
 	modules = {
 		toggle = function(moduleName)
-			switchModule(moduleName, "toggle")
+			switchModule(moduleName)
 		end,
 
 		enable = function(moduleName)
-			switchModule(moduleName, "enable")
+			switchModule(moduleName, true)
 		end,
 
 		disable = function(moduleName)
-			switchModule(moduleName, "disable")
+			switchModule(moduleName, false)
 		end,
 
 		["config"] = {
