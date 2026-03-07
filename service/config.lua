@@ -13,13 +13,13 @@ function config.init(configName, configData)
 end
 
 function config.save(configName)
-	lje.con_print("[AF] Saving config: " .. configName)
+	af.log("Saving config: " .. configName)
 	local configJson = util.TableToJSON(config.cache[configName], true)
 	lje.data.write(string.format("%s_%s_config", namespace, configName), configJson)
 end
 
 function config.load(configName)
-	lje.con_print("[AF] Loading config: " .. configName)
+	af.log("Loading config: " .. configName)
 	if config.data[configName] then
 		local jsonData = lje.data.read(string.format("%s_%s_config", namespace, configName))
 		if jsonData then
@@ -37,13 +37,13 @@ function config.load(configName)
 				end
 			end
 		else
-			lje.con_print("[AF] New config, using defaults for: " .. configName)
+			af.log("New config, using defaults for: " .. configName)
 			config.cache[configName] = config.data[configName]
 			config.save(configName)
 		end
 		return config.cache[configName]
 	else
-		lje.con_print("[AF] Config was not initalized before it was loaded! Offending config/module: " .. configName)
+		af.log("Config was not initalized before it was loaded! Offending config/module: " .. configName, af.level.error)
 	end
 end
 

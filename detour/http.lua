@@ -1,6 +1,15 @@
 -- No state necessary for this module, just needs a detour
-local HWL = lje.require("service/http_whitelist.lua")
+lje.require("service/http_whitelist.lua")
 local origHttp = HTTP
+
+local function checkURL(url, func)
+	local allowed = af.http.isWhitelisted(url)
+	af.log(
+		string.format("[%s] %s request to $yellow{%s}", func, allowed and "$green{Allowing}" or "$red{Dropping}", url),
+		af.level.warn
+	)
+	return allowed
+end
 
 local function httpHk(params)
 	local url = rawget(params, "url") or ""
@@ -9,10 +18,7 @@ local function httpHk(params)
 		url = tostring(url)
 	end
 
-	lje.con_printf("[AF] [HTTP] HTTP request to URL: $yellow{%s}", url)
-
-	if not HWL.isWhitelisted(url) then
-		lje.con_printf("[AF] [HTTP] Blocked HTTP request to URL: $red{%s}", url)
+	if not checkURL(url, "HTTP") then
 		return true -- make them think it was queued
 	end
 
@@ -23,13 +29,9 @@ rawset(_G, "HTTP", lje.detour(origHttp, httpHk))
 
 local origPanelOpenURL = FindMetaTable("Panel").OpenURL
 local function panelOpenUrlHk(self, url)
-	lje.con_printf("[AF] [Panel:OpenURL] Attempt to open URL: $yellow{%s}", url)
-	if HWL.isWhitelisted(url) then
-		lje.con_printf("[AF] [Panel:OpenURL] Allowing URL: $yellow{%s}", url)
+	if checkURL(url, "Panel:OpenURL") then
 		return origPanelOpenURL(self, url)
 	else
-		lje.con_printf("[AF] [Panel:OpenURL] Blocking URL: $red{%s}", url)
-
 		return
 	end
 end
@@ -38,14 +40,9 @@ FindMetaTable("Panel").OpenURL = lje.detour(origPanelOpenURL, panelOpenUrlHk)
 
 local origGuiOpenURL = gui.OpenURL
 local function guiOpenUrlHk(url)
-	lje.con_printf("[AF] [gui.OpenURL] Attempt to open URL: $yellow{%s}", url)
-	if HWL.isWhitelisted(url) then
-		lje.con_printf("[AF] [gui.OpenURL] Allowing URL: $yellow{%s}", url)
-
+	if checkURL(url, "gui.OpenURL") then
 		return origGuiOpenURL(url)
 	else
-		lje.con_printf("[AF] [gui.OpenURL] Blocking URL: $red{%s}", url)
-
 		return
 	end
 end

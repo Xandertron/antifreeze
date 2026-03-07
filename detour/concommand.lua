@@ -6,18 +6,18 @@ function af.concmdAdd(name, desc, flags, func)
 	af.concmds[name].func = func
 end
 
-lje.vm.add_engine_call_hook(function(func, nargs, nresults, ...)
+lje.vm.set_engine_call_hook(function(func, nargs, nresults, ...)
 	if nargs > 0 then
 		if func == lje.get_global("concommand", "Run") then
 			local ply, cmd, args, argStr = ...
 			if af.concmds[cmd] and af.concmds[cmd].func then
-				lje.con_print("[AF] Executing console command: " .. cmd)
+				lje.vm.handle_engine_call()
+				af.log("Executing console command: " .. cmd)
 				af.concmds[cmd].func(ply, cmd, args, argStr)
-				return false, true -- Block the original function call.
+				return true -- Block the original function call.
 			end
 		end
 	end
-	return true
 end)
 
 local function escape_pattern(str)
@@ -62,7 +62,7 @@ af.concmdAdd("lua_run_lje", "Runs lua in LJE's environment", 0, function(_, _, _
 	if func then
 		local success, err = pcall(func)
 		if not success then
-			lje.con_print(err)
+			af.log(err)
 		end
 	end
 end)

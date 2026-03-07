@@ -52,7 +52,7 @@ end
 -- This is a little gross so brace yourself
 aimbot.bind_code = _L["KEY_H"]
 if not aimbot.bind_code then
-	lje.con_print("Invalid bind key specified in config/aimbot.lua")
+	af.log("Invalid bind key specified in config/aimbot.lua")
 	aimbot.bind_code = KEY_H
 end
 

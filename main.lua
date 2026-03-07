@@ -61,6 +61,97 @@ af.brand.color = Color(127, 255, 255)
 
 lje.include("service/concommand.lua")
 
+local function coerce(str)
+	if type(str) ~= "string" then
+		return str
+	end
+
+	local lower = string.lower(str)
+
+	if lower == "true" then
+		return true
+	end
+	if lower == "false" then
+		return false
+	end
+	if lower == "nil" then
+		return nil
+	end
+
+	local num = tonumber(str)
+	if num ~= nil then
+		return num
+	end
+
+	return str
+end
+
+local function getKeys(tbl)
+	local keys = {}
+	local id = 1
+
+	for k, v in pairs(tbl) do
+		keys[id] = k
+		id = id + 1
+	end
+
+	return keys
+end
+
+af.commands = af.commands or lje.include("service/commands.lua")
+af.commands.tree = {
+	info = function()
+		print(string.format("%s (version %s)", af.info.name, af.info.version))
+	end,
+	modules = {
+		toggle = function(moduleName)
+			switchModule(moduleName)
+		end,
+
+		enable = function(moduleName)
+			switchModule(moduleName, true)
+		end,
+
+		disable = function(moduleName)
+			switchModule(moduleName, false)
+		end,
+
+		["config"] = {
+			set = function(moduleName, key, value)
+				local value = coerce(value)
+				local ret = config.set(moduleName, key, value)
+				if type(ret) ~= type(value) then
+					print("[AF] Wrong type, expected: " .. type(ret))
+				elseif ret ~= value and ret and value and type(ret) == "number" then
+					print("[AF] Number was either too large or too small, please try again")
+				end
+			end,
+
+			list = function(moduleName)
+				if not moduleName then
+					print(
+						string.format(
+							"[AF] Configurable modules available:\n%s",
+							table.concat(getKeys(config.cache), ", ")
+						)
+					)
+				else
+					local output = ""
+					for optionName, optionData in pairs(config.cache[moduleName]) do
+						output = output .. string.format("\n%s: %s", optionName, tostring(optionData.value))
+					end
+					print(string.format("[AF] Options available:%s", output))
+				end
+			end,
+		},
+	},
+}
+af.commands.attachHelp(af.commands.tree, {})
+
+af.concmdAdd("antifreeze", "Main Antifreeze command", 0, function(_, _, args, argsStr)
+	af.commands.dispatch(af.commands.tree, args)
+end)
+
 local modules = {}
 af.modules = modules
 
@@ -77,15 +168,6 @@ config.init("main", {
 
 af.config = config
 
-local modulesToLoad = {
-	"aimbot",
-	"esp",
-	"bhop",
-	"antiscreengrab", --doesnt function like a normal module, just for gui hints
-	"freecam",
-	"fullbright",
-}
-
 --hooks for modules to supply
 local moduleHooks = {
 	draw = {}, --rendering hooks
@@ -93,44 +175,46 @@ local moduleHooks = {
 	move = {},
 }
 
-local function loadModule(moduleName)
-	lje.con_print("[AF] Loading module: " .. moduleName)
-	data, hooks = unpack({ lje.include("module/" .. moduleName .. ".lua") })
-
+function af.loadModule(name, data, hooks)
 	if data == nil then
-		lje.con_print("[AF] Failed to load module: " .. moduleName)
+		af.log("No data for: " .. name, af.level.WARN)
 		return
 	end
 
-	modules[moduleName] = data
-	modules[moduleName].enabled = data.enabled or false
+	modules[name] = data
+	modules[name].enabled = data.enabled or false
 
 	local enabledModules = config.get("main", "enabledModules")
 	if enabledModules then
-		modules[moduleName].enabled = enabledModules[moduleName] or false
+		modules[name].enabled = enabledModules[name] or false
 	end
 
 	if hooks == nil then
-		lje.con_print("[AF] No hooks!")
+		af.log("No hooks!", af.level.warn)
 		return
 	end
 
 	for hook, func in pairs(hooks) do
 		if moduleHooks[hook] then
-			moduleHooks[hook][moduleName] = func
+			moduleHooks[hook][name] = func
 		else
-			lje.con_print("[AF]" .. name .. " tried to use an invalid hook: " .. hook)
+			af.log(name .. " tried to use an invalid hook: " .. hook, af.level.warn)
 		end
 	end
 end
 
-for idx, moduleName in ipairs(modulesToLoad) do
-	loadModule(moduleName)
+local modulesToLoad = lje.env.find_script_files("module/*")
+
+for idx, path in ipairs(modulesToLoad) do
+	local moduleName = string.match(path, "^module/([^/]+)%.lua$")
+	af.log("Loading internal module: " .. moduleName)
+	data, hooks = unpack({ lje.include(path) })
+	af.loadModule(moduleName, data, hooks)
 end
 
 local function switchModule(moduleName, switch)
 	if not (moduleName and af.modules[moduleName]) then
-		print("That module doesnt exist!")
+		print("[AF] That module doesnt exist!")
 		return
 	end
 
@@ -167,100 +251,12 @@ local function switchModule(moduleName, switch)
 	config.set("main", "enabledModules", enabledModules)
 end
 
-local function coerce(str)
-	if type(str) ~= "string" then
-		return str
-	end
-
-	local lower = string.lower(str)
-
-	if lower == "true" then
-		return true
-	end
-	if lower == "false" then
-		return false
-	end
-	if lower == "nil" then
-		return nil
-	end
-
-	local num = tonumber(str)
-	if num ~= nil then
-		return num
-	end
-
-	return str
-end
-
-function getKeys(tbl)
-	local keys = {}
-	local id = 1
-
-	for k, v in pairs(tbl) do
-		keys[id] = k
-		id = id + 1
-	end
-
-	return keys
-end
-
-af.commands = lje.include("service/commands.lua")
-af.commands.tree = {
-	info = function()
-		print(string.format("%s (version %s)", af.info.name, af.info.version))
-	end,
-	modules = {
-		toggle = function(moduleName)
-			switchModule(moduleName)
-		end,
-
-		enable = function(moduleName)
-			switchModule(moduleName, true)
-		end,
-
-		disable = function(moduleName)
-			switchModule(moduleName, false)
-		end,
-
-		["config"] = {
-			set = function(moduleName, key, value)
-				local value = coerce(value)
-				local ret = config.set(moduleName, key, value)
-				if type(ret) ~= type(value) then
-					print("Wrong type, expected: " .. type(ret))
-				elseif ret ~= value and ret and value and type(ret) == "number" then
-					print("Number was either too large or too small, please try again")
-				end
-			end,
-
-			list = function(moduleName)
-				if not moduleName then
-					print(
-						string.format("Configurable modules available:\n%s", table.concat(getKeys(config.cache), ", "))
-					)
-				else
-					local output = ""
-					for optionName, optionData in pairs(config.cache[moduleName]) do
-						output = output .. string.format("\n%s: %s", optionName, tostring(optionData.value))
-					end
-					print(string.format("Options available:%s", output))
-				end
-			end,
-		},
-	},
-}
-af.commands.attachHelp(af.commands.tree, {})
-
-af.concmdAdd("antifreeze", "Main Antifreeze command", 0, function(_, _, args, argsStr)
-	af.commands.dispatch(af.commands.tree, args)
-end)
-
 function printTable(t, indent, seen)
 	indent = indent or 0
 	seen = seen or {}
 
 	if seen[t] then
-		lje.con_print(string.rep("  ", indent) .. "*cycle*")
+		af.log(string.rep("  ", indent) .. "*cycle*", af.level.debug)
 		return
 	end
 	seen[t] = true
@@ -268,25 +264,26 @@ function printTable(t, indent, seen)
 	for k, v in pairs(t) do
 		local prefix = string.rep("  ", indent) .. tostring(k) .. ": "
 		if type(v) == "table" then
-			lje.con_print(prefix .. "{")
+			af.log(prefix .. "{", af.level.debug)
 			printTable(v, indent + 1, seen)
-			lje.con_print(string.rep("  ", indent) .. "}")
+			af.log(string.rep("  ", indent) .. "}", af.level.debug)
 		else
-			lje.con_print(prefix .. tostring(v))
+			af.log(prefix .. tostring(v), af.level.debug)
 		end
 	end
 end
 
 if af.debug then
-	lje.con_print("modules:")
+	af.log("modules:", af.level.debug)
 	printTable(modules)
-	lje.con_print("module hooks:")
+	af.log("module hooks:", af.level.debug)
 	printTable(moduleHooks)
-	lje.con_print("config cache:")
+	af.log("config cache:", af.level.debug)
 	printTable(config.cache)
 end
 
 --local acculmativeMenuSize = 0
+local color = Color(255, 0, 0, 255)
 
 hook.pre("ljeutil/render", "antifreeze.ui", function()
 	if not af.ignoreMainMenu and gui.IsGameUIVisible() then
@@ -309,10 +306,12 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 		curY = curY + 20
 	end
 
-	if modules.antiscreengrab.isScreengrabRecent() then
+	if modules.antiscreengrab.isScreengrabRecent() or af.debug then
+		local timeSince = modules.antiscreengrab.timeSinceScreengrab()
 		surface.SetTextPos(10, curY)
-		surface.SetTextColor(255, math.sin(SysTime() * 15) * 127 + 128, 255, 255)
-		surface.DrawText(string.format("Screengrabbed %.1f seconds ago!", modules.antiscreengrab.timeSinceScreengrab()))
+		local c = timeSince <= 30 and (math.sin(SysTime() * 15) * 127 + 128) or 127
+		surface.SetTextColor(c, 255, 255, 255)
+		surface.DrawText(string.format("Screengrabbed %.1f seconds ago!", timeSince))
 		curY = curY + 20
 	end
 
@@ -320,6 +319,20 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	surface.SetTextColor(af.brand.color)
 	surface.DrawText(string.format("GC Memory: %d B", lje.gc.get_total()))
 	curY = curY + 20
+
+	----
+	--ui shit
+	----
+
+	imgui.new_frame()
+	if imgui.is_visible() then
+		local visible, open = imgui.begin_window("test")
+
+		imgui.text("hello world!")
+
+		imgui.end_window()
+	end
+	imgui.render()
 
 	--glui.style(af.brand.gluiStyle)
 	--[[glui.draw.beginWindow("mainWindow", "Utility Mod", 10, curY, 400, acculmativeMenuSize)

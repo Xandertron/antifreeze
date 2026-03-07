@@ -1,10 +1,13 @@
 local antiscreengrab = {}
 local origCapture = render.Capture
 
-antiscreengrab.lastGrabbed = 0
-antiscreengrab.threshold = 10 -- seconds
+antiscreengrab.lastGrabbed = -1
+antiscreengrab.threshold = 300 -- seconds
 
 function antiscreengrab.isScreengrabRecent()
+	if antiscreengrab.lastGrabbed == -1 then
+		return false
+	end
 	return (SysTime() - antiscreengrab.lastGrabbed) <= antiscreengrab.threshold
 end
 

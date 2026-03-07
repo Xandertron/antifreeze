@@ -7,7 +7,7 @@ local function helpFor(node, path)
 	end
 	table.sort(cmds)
 
-	print("usage:", table.concat(path, " "), "<" .. table.concat(cmds, " | ") .. ">")
+	print("[AF] Usage:", table.concat(path, " "), "<" .. table.concat(cmds, " | ") .. ">")
 end
 
 local function attachHelp(node, path)
@@ -20,7 +20,7 @@ local function attachHelp(node, path)
 	if not node.__default then
 		node.__default = function(bad)
 			if bad then
-				print("unknown subcommand:", bad)
+				print("[AF] Unknown subcommand:", bad)
 			end
 			helpFor(node, path)
 		end
@@ -69,7 +69,7 @@ local function dispatch(node, args, index)
 		end
 
 		-- fallback error message
-		print(("unknown subcommand: %s"):format(tostring(key)))
+		print(("[AF] Unknown subcommand: %s"):format(tostring(key)))
 		return
 	end
 
