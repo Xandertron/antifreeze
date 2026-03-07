@@ -289,7 +289,6 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	if not af.ignoreMainMenu and gui.IsGameUIVisible() then
 		return
 	end
-	--local mx, my = glui.beginInput()
 
 	cam.Start2D()
 	render.PushRenderTarget(lje.util.rendertarget)
@@ -392,13 +391,22 @@ hook.pre("think", "antifreeze.think", function()
 	end
 end)
 
-local MOVEMENT_BUTTONS = IN_FORWARD + IN_BACK + IN_MOVELEFT + IN_MOVERIGHT + IN_JUMP + IN_DUCK + IN_SPEED + IN_WALK
+local FREEZE_BUTTONS = 0
+	+ IN_FORWARD
+	+ IN_BACK
+	+ IN_MOVELEFT
+	+ IN_MOVERIGHT
+	+ IN_JUMP
+	+ IN_DUCK
+	+ IN_SPEED
+	+ IN_WALK
+	+ IN_ATTACK
+	+ IN_ATTACK2
 
-local function disableMovement(buttons)
+local function freezeButtons(buttons)
 	return bit.band(buttons, bit.bnot(MOVEMENT_BUTTONS))
 end
 
---todo: keybind manager/ui toggle
 hook.pre("CreateMove", "antifreeze.move", function(cmd)
 	for moduleName, moveFunction in pairs(moduleHooks.move) do
 		if modules[moduleName].enabled then
@@ -409,10 +417,7 @@ hook.pre("CreateMove", "antifreeze.move", function(cmd)
 	if modules.freecam.enabled then
 		--clear movement so we're not walking off cliffs while freecaming
 		cmd:ClearMovement()
-		cmd:SetButtons(disableMovement(cmd:GetButtons()))
-
-		--recoil isnt aplied while in freecam, removes a detection vector
-		cmd:SetButtons(bit.band(cmd:GetButtons(), bit.bnot(IN_ATTACK + IN_ATTACK2)))
+		cmd:SetButtons(freezeButtons(cmd:GetButtons()))
 		cmd:SetViewAngles(modules.freecam.startAngles)
 	end
 end)
@@ -428,5 +433,3 @@ hook.pre("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang
 end)
 
 lje.con_printf("$cyan{\n" .. af.brand.watermark .. "\n}")
-
-return af
