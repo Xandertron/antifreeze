@@ -1,4 +1,5 @@
 local freecam = freecam or {}
+--todo: make these global, all modules
 
 freecam.name = "Freecam"
 freecam.description = "Detach from your body, and fly through walls. (Screengrabbable)"

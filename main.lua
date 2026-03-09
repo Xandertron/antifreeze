@@ -1,7 +1,5 @@
 local af = af or {}
 
-af.debug = false --debug prints, etc
-
 af.info = {}
 af.info.version = "1.1.0"
 af.info.name = "Antifreeze"
@@ -19,45 +17,6 @@ af.brand.watermark = [[
 ]]
 af.brand.name = "Antifreeze"
 af.brand.color = Color(127, 255, 255)
---[[af.brand.gluiStyle = {
-	other = {
-		titleHeight = 20,
-		border = col(255, 255, 255, 255),
-		helpText = col(255, 255, 255, 255),
-	},
-
-	text = {
-		normal = col(255, 255, 255, 255),
-		disabled = col(128, 128, 128, 255),
-	},
-
-	button = {
-		frame = col(35, 35, 35, 255),
-		hover = col(50, 50, 50, 255),
-		press = col(80, 80, 80, 255),
-		text = col(215, 215, 215, 255),
-	},
-
-	tab = {
-		frame = col(35, 35, 35, 255),
-		hover = col(50, 50, 50, 255),
-		press = col(80, 80, 80, 255),
-		btn_frame = col(143, 1, 20, 255),
-		text = col(215, 215, 215, 255),
-	},
-
-	title = {
-		frame = col(82, 146, 146, 127),
-		hover = col(50, 50, 50, 255),
-		press = col(80, 80, 80, 255),
-		text = col(215, 215, 215, 255),
-	},
-
-	window = {
-		frame = col(127, 255, 255, 127),
-	},
-}]]
---
 
 lje.include("service/concommand.lua")
 
@@ -98,6 +57,63 @@ local function getKeys(tbl)
 	return keys
 end
 
+local modules = {}
+af.modules = modules
+
+local config = lje.require("service/config.lua")
+config.init("main", {
+	enabledModules = { value = {
+		esp = true,
+		aimbot = false,
+		bhop = false,
+		freecam = false,
+	} },
+	keybinds = { value = {} },
+})
+
+af.config = config
+
+--too many sources of truth? main config and af.modules
+local function switchModule(moduleName, switch, temp)
+	if not (moduleName and af.modules[moduleName]) then
+		print("[AF] That module doesnt exist!")
+		return nil
+	end
+
+	local moduleTable = af.modules[moduleName]
+	local state = moduleTable.enabled or false
+
+	-- toggle if switch is nil
+	if switch == nil then
+		switch = not state
+	end
+
+	-- no state change, nothing to do
+	if state == switch then
+		return switch
+	end
+
+	-- rising and falling edge
+	if not state and switch then
+		if moduleTable.onEnable then
+			moduleTable.onEnable()
+		end
+	elseif state and not switch then
+		if moduleTable.onDisable then
+			moduleTable.onDisable()
+		end
+	end
+
+	-- update runtime state
+	moduleTable.enabled = switch
+
+	-- persist state
+	local enabledModules = config.get("main", "enabledModules")
+	enabledModules[moduleName] = switch
+	config.set("main", "enabledModules", enabledModules, temp)
+	return switch
+end
+
 af.commands = af.commands or lje.include("service/commands.lua")
 af.commands.tree = {
 	info = function()
@@ -105,15 +121,15 @@ af.commands.tree = {
 	end,
 	modules = {
 		toggle = function(moduleName)
-			switchModule(moduleName)
+			switchModule(moduleName, nil, true)
 		end,
 
 		enable = function(moduleName)
-			switchModule(moduleName, true)
+			switchModule(moduleName, true, true)
 		end,
 
 		disable = function(moduleName)
-			switchModule(moduleName, false)
+			switchModule(moduleName, false, true)
 		end,
 
 		["config"] = {
@@ -152,22 +168,6 @@ af.concmdAdd("antifreeze", "Main Antifreeze command", 0, function(_, _, args, ar
 	af.commands.dispatch(af.commands.tree, args)
 end)
 
-local modules = {}
-af.modules = modules
-
-local config = lje.require("service/config.lua")
-config.init("main", {
-	enabledModules = { value = {
-		esp = true,
-		aimbot = false,
-		bhop = false,
-		freecam = false,
-	} },
-	keybinds = { value = {} },
-})
-
-af.config = config
-
 --hooks for modules to supply
 local moduleHooks = {
 	draw = {}, --rendering hooks
@@ -190,7 +190,7 @@ function af.loadModule(name, data, hooks)
 	end
 
 	if hooks == nil then
-		af.log("No hooks!", af.level.warn)
+		af.log("No hooks!", af.level.debug)
 		return
 	end
 
@@ -210,45 +210,6 @@ for idx, path in ipairs(modulesToLoad) do
 	af.log("Loading internal module: " .. moduleName)
 	data, hooks = unpack({ lje.include(path) })
 	af.loadModule(moduleName, data, hooks)
-end
-
-local function switchModule(moduleName, switch)
-	if not (moduleName and af.modules[moduleName]) then
-		print("[AF] That module doesnt exist!")
-		return
-	end
-
-	local moduleTable = af.modules[moduleName]
-	local state = moduleTable.enabled or false
-
-	-- toggle if switch is nil
-	if switch == nil then
-		switch = not state
-	end
-
-	-- no state change, nothing to do
-	if state == switch then
-		return
-	end
-
-	-- rising and falling edge
-	if not state and switch then
-		if moduleTable.onEnable then
-			moduleTable.onEnable()
-		end
-	elseif state and not switch then
-		if moduleTable.onDisable then
-			moduleTable.onDisable()
-		end
-	end
-
-	-- update runtime state
-	moduleTable.enabled = switch
-
-	-- persist state
-	local enabledModules = config.get("main", "enabledModules")
-	enabledModules[moduleName] = switch
-	config.set("main", "enabledModules", enabledModules)
 end
 
 function printTable(t, indent, seen)
@@ -282,8 +243,9 @@ if af.debug then
 	printTable(config.cache)
 end
 
---local acculmativeMenuSize = 0
-local color = Color(255, 0, 0, 255)
+local imguiCursorEnabled = false
+imgui.set_visible(false)
+imgui.set_overlay_bind(84)
 
 hook.pre("ljeutil/render", "antifreeze.ui", function()
 	if not af.ignoreMainMenu and gui.IsGameUIVisible() then
@@ -325,53 +287,32 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 
 	imgui.new_frame()
 	if imgui.is_visible() then
-		local visible, open = imgui.begin_window("test")
+		if not imguiCursorEnabled then
+			gui.EnableScreenClicker(true)
+			imguiCursorEnabled = true
+		end
+		local visible, open = imgui.begin_window("Antifreeze", nil, imgui.WindowFlags_NoCollapse)
 
-		imgui.text("hello world!")
+		imgui.text(af.info.version)
+		for moduleName, data in pairs(config.cache) do
+			if modules[moduleName] then
+				local enabled = af.modules[moduleName].enabled
+				changed, value = imgui.checkbox(modules[moduleName].name or moduleName, enabled)
 
-		imgui.end_window()
-	end
-	imgui.render()
-
-	--glui.style(af.brand.gluiStyle)
-	--[[glui.draw.beginWindow("mainWindow", "Utility Mod", 10, curY, 400, acculmativeMenuSize)
-	local menuY = 10
-	local showSliders = glui.draw.checkbox("config.sliders.toggle", "Show sliders", 20, menuY, nil, nil)
-	for moduleName, data in pairs(config.cache) do
-		if modules[moduleName] then
-			local id = "config." .. tostring(moduleName) .. ".toggle"
-			menuY = menuY + 20
-			local checked = glui.draw.checkbox(id, modules[moduleName].name or moduleName, 20, menuY, nil, nil, modules[moduleName].enabled)
-			modules[moduleName].enabled = checked
-			config.cache["main"].enabledModules[moduleName] = checked
-			for optionName, optionData in pairs(config.cache[moduleName]) do
-				local id = "config." .. tostring(moduleName) .. "." .. optionName
-				if type(optionData.value) == "boolean" then
-					menuY = menuY + 20
-					config.cache[moduleName][optionName].value = glui.draw.checkbox(id, optionName, 40, menuY, nil, nil)
-				elseif type(optionData.value) == "number" and showSliders then
-					menuY = menuY + 20
-					local sliderValue = glui.draw.slider(
-						id,
-						40,
-						menuY,
-						200,
-						16,
-						optionData.min or 0,
-						optionData.max or 100,
-						optionData.value
-					)
-					config.cache[moduleName][optionName].value = sliderValue
-					menuY = menuY + 20
-					glui.draw.label(optionName .. ": " .. tostring(math.ceil(sliderValue * 100) / 100), 40, menuY)
+				if changed then
+					switchModule(moduleName, value)
 				end
 			end
 		end
+
+		imgui.end_window()
+	else
+		if imguiCursorEnabled then
+			gui.EnableScreenClicker(false)
+			imguiCursorEnabled = false
+		end
 	end
-	menuY = menuY + 40 + 10
-	acculmativeMenuSize = menuY
-	glui.draw.endWindow()
-	]]
+	imgui.render()
 
 	for moduleName, renderFunction in pairs(moduleHooks.draw) do
 		if modules[moduleName].enabled then
@@ -404,7 +345,7 @@ local FREEZE_BUTTONS = 0
 	+ IN_ATTACK2
 
 local function freezeButtons(buttons)
-	return bit.band(buttons, bit.bnot(MOVEMENT_BUTTONS))
+	return bit.band(buttons, bit.bnot(FREEZE_BUTTONS))
 end
 
 hook.pre("CreateMove", "antifreeze.move", function(cmd)

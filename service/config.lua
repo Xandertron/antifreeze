@@ -54,7 +54,7 @@ function config.get(configName, key)
 	end
 end
 
-function config.set(configName, key, newValue)
+function config.set(configName, key, newValue, temp)
 	local conf = config.cache[configName]
 	if key and newValue ~= nil and conf and conf[key] and conf[key].value ~= nil then
 		local value = conf[key].value
@@ -73,7 +73,7 @@ function config.set(configName, key, newValue)
 		end
 
 		conf[key].value = newValue
-		config.save(configName)
+		if not temp then config.save(configName) end
 		return newValue
 	end
 end
