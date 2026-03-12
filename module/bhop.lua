@@ -1,7 +1,10 @@
 local bhop = bhop or {}
 
-bhop.name = "Bunny Hop"
-bhop.description = "Jumps on contact with ground, while jumping. Like a bunny."
+bhop.moduleInfo = {
+	name = "Bunny Hop",
+	description = "Jumps on contact with ground, while jumping. Like a bunny.",
+	section = "movement",
+}
 
 local config = af.config
 config.init("bhop", {

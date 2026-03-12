@@ -1,7 +1,10 @@
 local duper = duper or {}
 
-duper.name = "Duplicator"
-duper.description = "{WIP} Duplicate what you can see."
+duper.moduleInfo = {
+	name = "Duplicator",
+	description = "{WIP} Duplicate what you can see.",
+	section = "other",
+}
 
 duper.codec = lje.include("service/advdupe2.lua")
 
@@ -36,11 +39,11 @@ af.commands.tree.duper = {
 			end
 		end
 
-        print(duper.codec.tableToDupe(entTable))
+		print(duper.codec.tableToDupe(entTable))
 
-        duper.codec.Encode(duper.codec.tableToDupe(entTable), duper.codec.GenerateDupeStamp(), function(data)
-            file.Write("advdupe2/map.txt", data)
-        end)
+		duper.codec.Encode(duper.codec.tableToDupe(entTable), duper.codec.GenerateDupeStamp(), function(data)
+			file.Write("advdupe2/map.txt", data)
+		end)
 	end,
 }
 af.commands.attachHelp(af.commands.tree, {})

@@ -1,7 +1,10 @@
 local aimbot = aimbot or {}
 
-aimbot.name = "Aimbot"
-aimbot.description = "Skill issue."
+aimbot.moduleInfo = {
+	name = "Aimbot",
+	description = "Skill issue.",
+	section = "combat",
+}
 
 local pid = lje.include("util/pid.lua")
 
@@ -137,11 +140,7 @@ local function draw()
 
 		local pitchOutput = aimbot.pitch_pid:compute(pitchTarget, currentPitch, dt)
 		local yawOutput = aimbot.yaw_pid:compute(yawTarget, currentYaw, dt)
-		currentViewAngles:SetUnpacked(
-			currentPitch + pitchOutput * dt,
-			currentYaw + yawOutput * dt,
-			0
-		)
+		currentViewAngles:SetUnpacked(currentPitch + pitchOutput * dt, currentYaw + yawOutput * dt, 0)
 		lp:SetEyeAngles(currentViewAngles)
 	end
 end

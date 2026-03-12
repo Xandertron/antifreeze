@@ -5,8 +5,11 @@ Example module:
 ```lua
 local esp = esp or {}
 
-esp.name = "ESP"
-esp.description = "See the living beyond walls."
+esp.moduleInfo = {
+	name = "ESP",
+	description = "See the living beyond walls.",
+	section = "render"
+}
 
 local config = af.config
 config.init("esp", {

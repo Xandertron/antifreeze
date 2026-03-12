@@ -1,8 +1,11 @@
 local freecam = freecam or {}
 --todo: make these global, all modules
 
-freecam.name = "Freecam"
-freecam.description = "Detach from your body, and fly through walls. (Screengrabbable)"
+freecam.moduleInfo = {
+	name = "Freecam",
+	description = "Detach from your body, and fly through walls. (Screengrabbable)",
+	section = "render",
+}
 
 local config = af.config
 config.init("freecam", {
@@ -57,6 +60,10 @@ hook.pre("Think", "antifreeze.freecam.movement", function()
 	freecam.currentPosition = freecam.currentPosition + move * speed
 
 	local lerpFactor = 1 - math.exp(-10 * ft)
+	if not freecam.lerpTargetPosition or not freecam.currentPosition then
+		freecam.onEnable()
+	end
+
 	freecam.lerpTargetPosition = LerpVector(lerpFactor, freecam.lerpTargetPosition, freecam.currentPosition)
 
 	--local scroll = input.GetAnalogValue(ANALOG_MOUSE_WHEEL)

@@ -4,10 +4,10 @@ a swiss army knife multi-tool script for [LJE](https://github.com/yogwoggf/lj-ex
 
 you wouldnt stab someone with a multi-tool would you? don't cheat for your own gain.
 
-press T to open the menu
+press F5 to open the menu
 
 # console commands
-  * `antifreeze` view info, access subcommands like toggling modules, changing settings
+  * `antifreeze` view info, access subcommands like toggling modules, changing settings, taunts
   * `lua_run_lje` run lua in lje's environment
 
 # features so far
@@ -18,6 +18,7 @@ press T to open the menu
   * freecam*
   * client-side duplicator (wip)
   * http whitelist
+  * taunting
 
 #### *screengrabbable
 

@@ -15,7 +15,6 @@ af.brand.watermark = [[
 | $$  | $$| $$ \  $$   | $$    /$$$$$$| $$      | $$  | $$| $$$$$$$$| $$$$$$$$ /$$$$$$$$| $$$$$$$$
 |__/  |__/|__/  \__/   |__/   |______/|__/      |__/  |__/|________/|________/|________/|________/
 ]]
-af.brand.name = "Antifreeze"
 af.brand.color = Color(127, 255, 255)
 
 lje.include("service/concommand.lua")
@@ -57,8 +56,8 @@ local function getKeys(tbl)
 	return keys
 end
 
-local modules = {}
-af.modules = modules
+af.modules = af.modules or {}
+af.moduleSections = af.moduleSections or {}
 
 local config = lje.require("service/config.lua")
 config.init("main", {
@@ -68,13 +67,12 @@ config.init("main", {
 		bhop = false,
 		freecam = false,
 	} },
-	keybinds = { value = {} },
 })
 
 af.config = config
 
 --too many sources of truth? main config and af.modules
-local function switchModule(moduleName, switch, temp)
+function af.switchModule(moduleName, switch, temp)
 	if not (moduleName and af.modules[moduleName]) then
 		print("[AF] That module doesnt exist!")
 		return nil
@@ -120,16 +118,38 @@ af.commands.tree = {
 		print(string.format("%s (version %s)", af.info.name, af.info.version))
 	end,
 	modules = {
+		list = function()
+			print(string.format("[AF] Modules:\n%s", table.concat(getKeys(af.modules), ", ")))
+		end,
+		info = function(moduleName)
+			local data = af.modules[moduleName]
+			if not data then
+				print("[AF] Unknown module!")
+			else
+				if data.moduleInfo then
+					print(
+						string.format(
+							"[AF] Info for %s:\nDescription: %s\nSection: %s",
+							data.moduleInfo.name,
+							data.moduleInfo.description,
+							data.moduleInfo.section
+						)
+					)
+				else
+					print("[AF] No other data for this module.")
+				end
+			end
+		end,
 		toggle = function(moduleName)
-			switchModule(moduleName, nil, true)
+			af.switchModule(moduleName, nil, true)
 		end,
 
 		enable = function(moduleName)
-			switchModule(moduleName, true, true)
+			af.switchModule(moduleName, true, true)
 		end,
 
 		disable = function(moduleName)
-			switchModule(moduleName, false, true)
+			af.switchModule(moduleName, false, true)
 		end,
 
 		["config"] = {
@@ -181,12 +201,19 @@ function af.loadModule(name, data, hooks)
 		return
 	end
 
-	modules[name] = data
-	modules[name].enabled = data.enabled or false
+	af.modules[name] = data
+	af.modules[name].enabled = data.enabled or false
 
+	if data.moduleInfo then
+		local key = data.moduleInfo.section or "none"
+		af.moduleSections[key] = af.moduleSections[key] or {}
+		af.moduleSections[key][name] = true
+	end
+
+	--enable modules if they were enabled before
 	local enabledModules = config.get("main", "enabledModules")
 	if enabledModules then
-		modules[name].enabled = enabledModules[name] or false
+		af.modules[name].enabled = enabledModules[name] or false
 	end
 
 	if hooks == nil then
@@ -212,7 +239,7 @@ for idx, path in ipairs(modulesToLoad) do
 	af.loadModule(moduleName, data, hooks)
 end
 
-function printTable(t, indent, seen)
+function af.printTable(t, indent, seen)
 	indent = indent or 0
 	seen = seen or {}
 
@@ -226,7 +253,7 @@ function printTable(t, indent, seen)
 		local prefix = string.rep("  ", indent) .. tostring(k) .. ": "
 		if type(v) == "table" then
 			af.log(prefix .. "{", af.level.debug)
-			printTable(v, indent + 1, seen)
+			af.printTable(v, indent + 1, seen)
 			af.log(string.rep("  ", indent) .. "}", af.level.debug)
 		else
 			af.log(prefix .. tostring(v), af.level.debug)
@@ -236,16 +263,18 @@ end
 
 if af.debug then
 	af.log("modules:", af.level.debug)
-	printTable(modules)
+	af.printTable(af.modules)
 	af.log("module hooks:", af.level.debug)
-	printTable(moduleHooks)
+	af.printTable(moduleHooks)
 	af.log("config cache:", af.level.debug)
-	printTable(config.cache)
+	af.printTable(config.cache)
 end
 
 local imguiCursorEnabled = false
 imgui.set_visible(false)
-imgui.set_overlay_bind(84)
+imgui.set_overlay_bind(0x74) --F5
+
+local ui = lje.include("service/ui.lua")
 
 hook.pre("ljeutil/render", "antifreeze.ui", function()
 	if not af.ignoreMainMenu and gui.IsGameUIVisible() then
@@ -261,14 +290,14 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 
 	local curY = 30
 
-	if modules.aimbot.target then
+	if af.modules.aimbot.target then
 		surface.SetTextPos(10, curY)
-		surface.DrawText("Aimbot Target: " .. modules.aimbot.target:Nick())
+		surface.DrawText("Aimbot Target: " .. af.modules.aimbot.target:Nick())
 		curY = curY + 20
 	end
 
-	if modules.antiscreengrab.isScreengrabRecent() or af.debug then
-		local timeSince = modules.antiscreengrab.timeSinceScreengrab()
+	if af.modules.antiscreengrab.isScreengrabRecent() or af.debug then
+		local timeSince = af.modules.antiscreengrab.timeSinceScreengrab()
 		surface.SetTextPos(10, curY)
 		local c = timeSince <= 30 and (math.sin(SysTime() * 15) * 127 + 128) or 127
 		surface.SetTextColor(c, 255, 255, 255)
@@ -278,7 +307,7 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 
 	surface.SetTextPos(10, curY)
 	surface.SetTextColor(af.brand.color)
-	surface.DrawText(string.format("GC Memory: %d B", lje.gc.get_total()))
+	surface.DrawText(string.format("GC Memory: %s MB", tostring(math.Round(lje.gc.get_total() / 1000 / 1000, 2))))
 	curY = curY + 20
 
 	----
@@ -293,17 +322,7 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 		end
 		local visible, open = imgui.begin_window("Antifreeze", nil, imgui.WindowFlags_NoCollapse)
 
-		imgui.text(af.info.version)
-		for moduleName, data in pairs(config.cache) do
-			if modules[moduleName] then
-				local enabled = af.modules[moduleName].enabled
-				changed, value = imgui.checkbox(modules[moduleName].name or moduleName, enabled)
-
-				if changed then
-					switchModule(moduleName, value)
-				end
-			end
-		end
+		ui.draw()
 
 		imgui.end_window()
 	else
@@ -315,7 +334,7 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	imgui.render()
 
 	for moduleName, renderFunction in pairs(moduleHooks.draw) do
-		if modules[moduleName].enabled then
+		if af.modules[moduleName].enabled then
 			renderFunction()
 		end
 	end
@@ -326,7 +345,7 @@ end)
 
 hook.pre("think", "antifreeze.think", function()
 	for moduleName, thinkFunction in pairs(moduleHooks.think) do
-		if modules[moduleName].enabled then
+		if af.modules[moduleName].enabled then
 			thinkFunction()
 		end
 	end
@@ -350,26 +369,26 @@ end
 
 hook.pre("CreateMove", "antifreeze.move", function(cmd)
 	for moduleName, moveFunction in pairs(moduleHooks.move) do
-		if modules[moduleName].enabled then
+		if af.modules[moduleName].enabled then
 			moveFunction(cmd)
 		end
 	end
 
-	if modules.freecam.enabled then
+	if af.modules.freecam.enabled then
 		--clear movement so we're not walking off cliffs while freecaming
 		cmd:ClearMovement()
 		cmd:SetButtons(freezeButtons(cmd:GetButtons()))
-		cmd:SetViewAngles(modules.freecam.startAngles)
+		cmd:SetViewAngles(af.modules.freecam.startAngles)
 	end
 end)
 
 hook.pre("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang)
-	if modules.freecam.enabled then
+	if af.modules.freecam.enabled then
 		cmd:SetMouseX(0)
 		cmd:SetMouseY(0)
 
-		modules.freecam.currentAngles[1] = math.Clamp(modules.freecam.currentAngles[1] + y / 50, -89, 89)
-		modules.freecam.currentAngles[2] = modules.freecam.currentAngles[2] - x / 50
+		af.modules.freecam.currentAngles[1] = math.Clamp(af.modules.freecam.currentAngles[1] + y / 50, -89, 89)
+		af.modules.freecam.currentAngles[2] = af.modules.freecam.currentAngles[2] - x / 50
 	end
 end)
 
