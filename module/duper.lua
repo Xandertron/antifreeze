@@ -3,7 +3,7 @@ local duper = duper or {}
 duper.moduleInfo = {
 	name = "Duplicator",
 	description = "{WIP} Duplicate what you can see.",
-	section = "other",
+	section = "none",
 }
 
 duper.codec = lje.include("service/advdupe2.lua")

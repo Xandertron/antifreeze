@@ -78,8 +78,9 @@ imgui.set_default_font(font)
 local tr, tg, tb = 0.5, 1, 1
 applyTheme(tr, tg, tb)
 
+local test = {}
+
 local function draw()
-	imgui.text(af.info.version)
 	if imgui.begin_tab_bar("Categories") then
 		for groupName, moduleList in pairs(af.moduleSections) do
 			--draw tabs
@@ -89,20 +90,67 @@ local function draw()
 				for moduleName, enabled in pairs(moduleList) do
 					local data = af.modules[moduleName]
 					if data and data.moduleInfo then
-						changed, value = imgui.checkbox(data.moduleInfo.name or moduleName, data.enabled)
+						--https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-can-i-have-multiple-windows-with-the-same-label
 
-						if imgui.is_item_hovered() then
-							imgui.set_tooltip(data.moduleInfo.description or "")
-						end
+						if af.config.cache[moduleName] then
+							local changed, value = imgui.checkbox("##" .. moduleName, data.enabled)
 
-						if changed then
-							af.switchModule(moduleName, value)
+							imgui.same_line()
+
+							local open = imgui.collapsing_header(data.moduleInfo.name or moduleName)
+							if imgui.is_item_hovered() then
+								imgui.set_tooltip(data.moduleInfo.description or "")
+							end
+
+							if open then
+								for optionName, optionData in pairs(af.config.cache[moduleName]) do
+									if type(optionData.value) == "boolean" then
+										imgui.indent()
+										local changed, value = imgui.checkbox(optionName, optionData.value)
+										imgui.unindent()
+										if changed then
+											af.config.set(moduleName, optionName, value)
+										end
+									elseif type(optionData.value) == "number" then
+										imgui.indent()
+										local changed, value = imgui.slider_float(
+											optionName,
+											optionData.value,
+											optionData.min or 0,
+											optionData.max or 100
+										)
+										imgui.unindent()
+
+										if changed then
+											--TODO: write this mf or track changed, its possible its true every frame
+											af.config.set(moduleName, optionName, value, true)
+										end
+									end
+								end
+							end
+
+							if changed then
+								af.switchModule(moduleName, value)
+							end
+						else
+							local changed, value = imgui.checkbox(data.moduleInfo.name or moduleName, data.enabled)
+
+							if changed then
+								af.switchModule(moduleName, value)
+							end
+
+							if imgui.is_item_hovered() then
+								imgui.set_tooltip(data.moduleInfo.description or "")
+							end
 						end
 					end
 				end
 				imgui.end_tab_item()
 			end
 		end
+
+		--settings tab
+
 		if imgui.begin_tab_item("settings") then
 			local changed, r, g, b = imgui.color_edit4("", tr, tg, tb, 1)
 
@@ -111,6 +159,11 @@ local function draw()
 				af.brand.color = Color(tr * 255, tg * 255, tb * 255)
 				tr, tg, tb = r, g, b
 			end
+
+			--if imgui.collapsing_header("Settings") then
+			--	  imgui.text("Settings content here")
+			--end
+
 			imgui.end_tab_item()
 		end
 		imgui.end_tab_bar()

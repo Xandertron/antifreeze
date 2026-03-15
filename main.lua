@@ -1,7 +1,7 @@
 local af = af or {}
 
 af.info = {}
-af.info.version = "1.1.0"
+af.info.version = "1.2.0"
 af.info.name = "Antifreeze"
 
 af.brand = {}
@@ -205,9 +205,12 @@ function af.loadModule(name, data, hooks)
 	af.modules[name].enabled = data.enabled or false
 
 	if data.moduleInfo then
-		local key = data.moduleInfo.section or "none"
-		af.moduleSections[key] = af.moduleSections[key] or {}
-		af.moduleSections[key][name] = true
+		local key = data.moduleInfo.section
+		if key ~= "none" then
+			key = key or "other" --handle non-defined sections
+			af.moduleSections[key] = af.moduleSections[key] or {}
+			af.moduleSections[key][name] = true
+		end
 	end
 
 	--enable modules if they were enabled before
@@ -271,7 +274,7 @@ if af.debug then
 end
 
 local imguiCursorEnabled = false
-imgui.set_visible(false)
+imgui.set_visible(false) --disable on startup
 imgui.set_overlay_bind(0x74) --F5
 
 local ui = lje.include("service/ui.lua")
@@ -283,10 +286,12 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 
 	cam.Start2D()
 	render.PushRenderTarget(lje.util.rendertarget)
+
+	--todo: move to own module, perhaps a hud module
 	surface.SetFont("ChatFont")
 	surface.SetTextPos(10, 10)
 	surface.SetTextColor(af.brand.color)
-	surface.DrawText("Antifreeze - LJE")
+	surface.DrawText("Antifreeze - " .. af.info.version .. " - LJE")
 
 	local curY = 30
 
@@ -320,7 +325,7 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 			gui.EnableScreenClicker(true)
 			imguiCursorEnabled = true
 		end
-		local visible, open = imgui.begin_window("Antifreeze", nil, imgui.WindowFlags_NoCollapse)
+		local visible, open = imgui.begin_window("Antifreeze | " .. af.info.version, nil, imgui.WindowFlags_NoCollapse)
 
 		ui.draw()
 
@@ -374,6 +379,7 @@ hook.pre("CreateMove", "antifreeze.move", function(cmd)
 		end
 	end
 
+	--todo: move to freecam module
 	if af.modules.freecam.enabled then
 		--clear movement so we're not walking off cliffs while freecaming
 		cmd:ClearMovement()

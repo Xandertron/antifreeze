@@ -3,7 +3,7 @@
 --see docs/config.md
 
 local config = config or {}
-config.data = config.data or {}
+config.data = config.data or {} --initial data
 config.cache = config.cache or {} --active data
 local namespace = "antifreeze"
 
@@ -23,14 +23,17 @@ function config.load(configName)
 	if config.data[configName] then
 		local jsonData = lje.data.read(string.format("%s_%s_config", namespace, configName))
 		if jsonData then
-			local configData = util.JSONToTable(jsonData)
-			config.cache[configName] = {}
+			local localData = util.JSONToTable(jsonData)
+
+			--set module's initial data as baseline
+			config.cache[configName] = config.data[configName]
+			--then apply local values on top
 
 			--preference data, ie
 			--  maxESPDistance = {value = 1000, min = 1, max = 30000}
 			--  strafingEnabled = {value = true}
 
-			for prefName, prefData in pairs(configData) do
+			for prefName, prefData in pairs(localData) do
 				if type(prefData) == "table" and config.data[configName][prefName] then
 					config.cache[configName][prefName] = config.data[configName][prefName]
 					config.cache[configName][prefName]["value"] = prefData.value --load just the value, ignore user limits
