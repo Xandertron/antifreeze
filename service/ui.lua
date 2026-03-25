@@ -80,7 +80,7 @@ applyTheme(tr, tg, tb)
 
 local test = {}
 
-local function draw()
+local function renderOverlay()
 	if imgui.begin_tab_bar("Categories") then
 		for groupName, moduleList in pairs(af.moduleSections) do
 			--draw tabs
@@ -105,21 +105,21 @@ local function draw()
 							if open then
 								for optionName, optionData in pairs(af.config.cache[moduleName]) do
 									if type(optionData.value) == "boolean" then
-										imgui.indent()
+										imgui.indent(28)
 										local changed, value = imgui.checkbox(optionName, optionData.value)
-										imgui.unindent()
+										imgui.unindent(28)
 										if changed then
 											af.config.set(moduleName, optionName, value)
 										end
 									elseif type(optionData.value) == "number" then
-										imgui.indent()
+										imgui.indent(28)
 										local changed, value = imgui.slider_float(
 											optionName,
 											optionData.value,
 											optionData.min or 0,
 											optionData.max or 100
 										)
-										imgui.unindent()
+										imgui.unindent(28)
 
 										if changed then
 											--TODO: write this mf or track changed, its possible its true every frame
@@ -170,4 +170,29 @@ local function draw()
 	end
 end
 
-return { draw = draw }
+local imguiCursorEnabled = false
+imgui.set_visible(false) --disable on startup
+imgui.set_overlay_bind(0x74) --F5
+
+local function drawOverlay()
+	imgui.new_frame()
+	if imgui.is_visible() then
+		if not imguiCursorEnabled then
+			gui.EnableScreenClicker(true)
+			imguiCursorEnabled = true
+		end
+		local visible, open = imgui.begin_window("Antifreeze | " .. af.info.version, nil, imgui.WindowFlags_NoCollapse)
+
+		renderOverlay()
+
+		imgui.end_window()
+	else
+		if imguiCursorEnabled then
+			gui.EnableScreenClicker(false)
+			imguiCursorEnabled = false
+		end
+	end
+	imgui.render()
+end
+
+return { drawOverlay = drawOverlay }

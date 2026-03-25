@@ -273,9 +273,6 @@ if af.debug then
 	af.printTable(config.cache)
 end
 
-local imguiCursorEnabled = false
-imgui.set_visible(false) --disable on startup
-imgui.set_overlay_bind(0x74) --F5
 
 local ui = lje.include("service/ui.lua")
 
@@ -287,56 +284,7 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	cam.Start2D()
 	render.PushRenderTarget(lje.util.rendertarget)
 
-	--todo: move to own module, perhaps a hud module
-	surface.SetFont("ChatFont")
-	surface.SetTextPos(10, 10)
-	surface.SetTextColor(af.brand.color)
-	surface.DrawText("Antifreeze - " .. af.info.version .. " - LJE")
-
-	local curY = 30
-
-	if af.modules.aimbot.target then
-		surface.SetTextPos(10, curY)
-		surface.DrawText("Aimbot Target: " .. af.modules.aimbot.target:Nick())
-		curY = curY + 20
-	end
-
-	if af.modules.antiscreengrab.isScreengrabRecent() or af.debug then
-		local timeSince = af.modules.antiscreengrab.timeSinceScreengrab()
-		surface.SetTextPos(10, curY)
-		local c = timeSince <= 30 and (math.sin(SysTime() * 15) * 127 + 128) or 127
-		surface.SetTextColor(c, 255, 255, 255)
-		surface.DrawText(string.format("Screengrabbed %.1f seconds ago!", timeSince))
-		curY = curY + 20
-	end
-
-	surface.SetTextPos(10, curY)
-	surface.SetTextColor(af.brand.color)
-	surface.DrawText(string.format("GC Memory: %s MB", tostring(math.Round(lje.gc.get_total() / 1000 / 1000, 2))))
-	curY = curY + 20
-
-	----
-	--ui shit
-	----
-
-	imgui.new_frame()
-	if imgui.is_visible() then
-		if not imguiCursorEnabled then
-			gui.EnableScreenClicker(true)
-			imguiCursorEnabled = true
-		end
-		local visible, open = imgui.begin_window("Antifreeze | " .. af.info.version, nil, imgui.WindowFlags_NoCollapse)
-
-		ui.draw()
-
-		imgui.end_window()
-	else
-		if imguiCursorEnabled then
-			gui.EnableScreenClicker(false)
-			imguiCursorEnabled = false
-		end
-	end
-	imgui.render()
+	ui.drawOverlay()
 
 	for moduleName, renderFunction in pairs(moduleHooks.draw) do
 		if af.modules[moduleName].enabled then

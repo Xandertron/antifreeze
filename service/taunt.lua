@@ -1003,4 +1003,198 @@ taunt.swapWords = {
 	"pussy",
 }
 
+taunt.targetedTaunts = parse([[
+%s did someone else pick that up for you
+%s did you even try
+%s eat dirt
+%s even the tutorial would reject you
+%s everyone laughs at you
+%s get dunked on
+%s get off the server
+%s get your shit together
+%s go back to singleplayer
+%s go back to tutorial
+%s go cry in a corner
+%s go touch grass and never come back
+%s go touch some grass
+%s go uninstall and reflect
+%s just accept you're bad
+%s just delete your profile
+%s learn the game first
+%s nobody wants you here
+%s put the controller down
+%s put the mouse down
+%s skill issue detected
+%s that gameplay should be illegal
+%s that performance deserves a penalty
+%s that was a certified yikes
+%s that was embarrassing
+%s the bots feel sorry for you
+%s the floor has more skill than you
+%s try harder next time oh wait
+%s what was that aim
+%s you absolute muppet
+%s you belong in bronze
+%s you couldn't frag out if your life depended on it
+%s you couldn't hit a barn door
+%s you couldn't hit the broad side of a bus
+%s you couldn't hit water falling out of a boat
+%s you couldn't kill a snail
+%s you couldn't outplay a rock
+%s you fight like you're sleepwalking
+%s you have negative game sense
+%s you need a lot of practice
+%s you play like a toddler
+%s you play like ass
+%s you play like it's your first day
+%s you play like my grandma
+%s you play like you have oven mitts on
+%s you play like you lost a bet
+%s you play like you're drunk and blindfolded
+%s you stink at this
+%s you're a certified potato
+%s you're a clown show
+%s you're a complete non-factor
+%s you're a complete write-off
+%s you're a disappointment
+%s you're a dumpster fire
+%s you're a glorified sandbag
+%s you're a liability
+%s you're a living tutorial dummy
+%s you're a meme at this point
+%s you're a muppet with a mouse
+%s you're a permanent liability
+%s you're a walking L
+%s you're a walking headshot target
+%s you're a walking punching bag
+%s you're actually delusional
+%s you're actually terrible
+%s you're actually unfixable
+%s you're an absolute liability
+%s you're an embarrassment
+%s you're an insult to the game
+%s you're beyond hopeless
+%s you're beyond saving
+%s you're bottom of the barrel
+%s you're cooked beyond recognition
+%s you're dog water through and through
+%s you're dogshit at this
+%s you're genuinely beyond help
+%s you're getting ratio'd by npcs
+%s you're getting smoked and you know it
+%s you're giving everyone second hand embarrassment
+%s you're permanently cooked
+%s you're the definition of cannon fodder
+%s your aim couldn't hit a wall indoors
+%s your aim is a crime
+%s your aim is a disaster
+%s your aim is a public safety hazard
+%s your aim is genuinely offensive
+%s your confidence is unjustified
+%s your existence is a mistake
+%s your kill death ratio is a tragedy
+%s your parents must be so proud
+%s your performance is tragic
+absolute donkey %s absolute donkey
+absolute rubbish %s absolute rubbish
+absolute shambles %s absolute shambles
+absolute waste of space %s
+absolute zero %s absolute zero
+actual bot %s actual bot
+actual human sandbag %s
+bots play better than you %s
+bro %s just bro
+certified bottom fragger %s
+certified dumbass %s certified dumbass
+certified hardstuck %s
+certified loser %s certified loser
+certified noob %s forever a noob
+chronic bottom fragger %s
+cry about it %s
+embarrassing shit %s embarrassing
+fuck off %s you're terrible
+fucking atrocious %s just atrocious
+fucking hell %s get good or get out
+fucking yikes %s fucking yikes
+garbage tier %s absolute garbage
+get fucked %s
+get good or get gone %s
+get lost %s you walking L
+get out of here %s you bum
+get owned %s
+get rekt %s
+get shrekt %s you worthless scrub
+get stomped %s
+gg no re %s you were never a threat
+give up %s seriously
+god you're bad %s
+hey %s you fucking suck
+holy fuck %s get good
+holy shit %s just quit
+holy shit %s you're bad
+hot garbage %s hot garbage
+jesus christ %s learn to aim
+laughingstock %s total laughingstock
+lmao %s you actually suck
+lmaooo %s you're done
+loser mentality %s loser mentality
+mega yikes %s mega yikes
+nice choke job %s
+nice feeding %s keep it up
+nice fucking aim %s absolute zero
+nice headless chicken impression %s
+nice job feeding %s star player you are
+nice movement moron %s
+nice strategy dipshit %s
+nice try dipshit %s
+nice try loser %s
+no skill %s zero skill
+nobody is impressed %s
+not even close %s not even fucking close
+pathetic %s just pathetic
+quit now %s you're cooked
+see you never %s
+sit down %s you clown
+skill issue %s massive skill issue
+stay mad %s
+that was dogshit %s come on
+that was putrid %s
+tragic %s just tragic
+tragic excuse for a player %s
+trash human %s trash human
+typical trash aim %s
+uninstall already %s
+utter horseshit %s utter horseshit
+weak %s so fucking weak
+what a joke %s what a genuine joke
+what a scrub %s
+what a shit show %s
+what a waste of a player %s
+what are you even doing %s
+what the actual fuck was that %s
+what the hell was that %s
+why are you here %s
+you can't %s
+you suck ass %s
+you'll never improve %s face it
+you're a clown %s in a clown car
+you're a disgrace to the game %s
+you're a fraud %s plain and simple
+you're a fucking disaster %s
+you're a joke %s
+you're a sitting duck %s always have been
+you're absolute garbage %s
+you're an actual clown %s
+you're cooked %s go home
+you're cooked %s medium well done
+you're cooked %s stick a fork in you
+you're fucking hopeless %s
+you're genuinely terrible %s
+you're getting bullied %s and you deserve it
+you're irrelevant %s stay irrelevant
+you're outclassed %s massively outclassed
+you're the reason teams lose %s
+you're washed %s completely washed
+]])
+
 return taunt
