@@ -13,9 +13,17 @@ function config.init(configName, configData)
 end
 
 function config.save(configName)
-	af.log("Saving config: " .. configName)
+	
 	local configJson = util.TableToJSON(config.cache[configName], true)
 	lje.data.write(string.format("%s_%s_config", namespace, configName), configJson)
+end
+
+function config.saveAll()
+	af.log("Saving all configurations")
+	for configName, configData in pairs(config.cache) do
+		local configJson = util.TableToJSON(configData, true)
+		lje.data.write(string.format("%s_%s_config", namespace, configName), configJson)
+	end
 end
 
 function config.load(configName)
@@ -46,7 +54,10 @@ function config.load(configName)
 		end
 		return config.cache[configName]
 	else
-		af.log("Config was not initalized before it was loaded! Offending config/module: " .. configName, af.level.error)
+		af.log(
+			"Config was not initalized before it was loaded! Offending config/module: " .. configName,
+			af.level.error
+		)
 	end
 end
 
@@ -76,7 +87,9 @@ function config.set(configName, key, newValue, temp)
 		end
 
 		conf[key].value = newValue
-		if not temp then config.save(configName) end
+		if not temp then
+			config.save(configName)
+		end
 		return newValue
 	end
 end

@@ -1,84 +1,33 @@
-local function applyTheme(r, g, b)
-	imgui.set_style({
-		colors = {
-			-- Main window
-			window_bg = { r = r * 0.15, g = g * 0.15, b = b * 0.15, a = 0.95 },
-			border = { r = r * 0.50, g = g * 0.50, b = b * 0.50, a = 0.60 },
-
-			-- Title bar
-			title_bg = { r = r * 0.40, g = g * 0.40, b = b * 0.40, a = 1.0 },
-			title_bg_active = { r = r * 0.60, g = g * 0.60, b = b * 0.60, a = 1.0 },
-			title_bg_collapsed = { r = r * 0.30, g = g * 0.30, b = b * 0.30, a = 0.75 },
-
-			-- Buttons
-			button = { r = r * 0.55, g = g * 0.55, b = b * 0.55, a = 1.0 },
-			button_hovered = { r = r * 0.75, g = g * 0.75, b = b * 0.75, a = 1.0 },
-			button_active = { r = r * 0.40, g = g * 0.40, b = b * 0.40, a = 1.0 },
-
-			-- Frames
-			frame_bg = { r = r * 0.25, g = g * 0.25, b = b * 0.25, a = 1.0 },
-			frame_bg_hovered = { r = r * 0.40, g = g * 0.40, b = b * 0.40, a = 1.0 },
-			frame_bg_active = { r = r * 0.55, g = g * 0.55, b = b * 0.55, a = 1.0 },
-
-			-- Sliders
-			slider_grab = { r = r * 0.70, g = g * 0.70, b = b * 0.70, a = 1.0 },
-			slider_grab_active = { r = r * 0.90, g = g * 0.90, b = b * 0.90, a = 1.0 },
-
-			-- Checkmark
-			check_mark = { r = r, g = g, b = b, a = 1.0 },
-
-			-- Headers
-			header = { r = r * 0.40, g = g * 0.40, b = b * 0.40, a = 0.80 },
-			header_hovered = { r = r * 0.60, g = g * 0.60, b = b * 0.60, a = 1.0 },
-			header_active = { r = r * 0.50, g = g * 0.50, b = b * 0.50, a = 1.0 },
-
-			-- Tabs
-			tab = { r = r * 0.35, g = g * 0.35, b = b * 0.35, a = 0.3 },
-			tab_hovered = { r = r * 0.65, g = g * 0.65, b = b * 0.65, a = 1.0 },
-			tab_selected = { r = r * 0.55, g = g * 0.55, b = b * 0.55, a = 1.0 },
-
-			-- Scrollbar
-			scrollbar_bg = { r = r * 0.10, g = g * 0.10, b = b * 0.10, a = 1.0 },
-			scrollbar_grab = { r = r * 0.45, g = g * 0.45, b = b * 0.45, a = 1.0 },
-			scrollbar_grab_hovered = { r = r * 0.60, g = g * 0.60, b = b * 0.60, a = 1.0 },
-			scrollbar_grab_active = { r = r * 0.35, g = g * 0.35, b = b * 0.35, a = 1.0 },
-
-			-- Separator
-			separator = { r = r * 0.45, g = g * 0.45, b = b * 0.45, a = 0.80 },
-			separator_hovered = { r = r * 0.65, g = g * 0.65, b = b * 0.65, a = 1.0 },
-			separator_active = { r = r * 0.85, g = g * 0.85, b = b * 0.85, a = 1.0 },
-
-			-- Resize grip
-			resize_grip = { r = r * 0.45, g = g * 0.45, b = b * 0.45, a = 0.50 },
-			resize_grip_hovered = { r = r * 0.65, g = g * 0.65, b = b * 0.65, a = 0.80 },
-			resize_grip_active = { r = r * 0.85, g = g * 0.85, b = b * 0.85, a = 1.0 },
-
-			-- Popup
-			popup_bg = { r = r * 0.18, g = g * 0.18, b = b * 0.18, a = 0.97 },
-
-			-- Text
-			text = { r = 0.70 + r * 0.30, g = 0.70 + g * 0.30, b = 0.70 + b * 0.30, a = 1.0 },
-			text_disabled = { r = 0.30 + r * 0.20, g = 0.30 + g * 0.20, b = 0.30 + b * 0.20, a = 1.0 },
-		},
-		rounding = {
-			window = 8,
-			frame = 6,
-			tab = 6,
-		},
-		padding = {
-			window = { x = 10, y = 10 },
-			frame = { 5, 4 },
-		},
-	})
-end
-
 local font = imgui.load_font("C:/Windows/Fonts/corbelb.ttf")
 imgui.set_default_font(font)
 
-local tr, tg, tb = 0.5, 1, 1
-applyTheme(tr, tg, tb)
+local themesToLoad = lje.env.find_script_files("service/themes/*")
+af.themes = {}
+af.themeList = {}
 
-local test = {}
+for idx, path in ipairs(themesToLoad) do
+	local themeName = string.match(path, "^service/themes/([^/]+)%.lua$")
+	af.log("Loading theme: " .. themeName)
+	af.themes[themeName] = lje.include(path)
+	table.insert(af.themeList, themeName)
+end
+
+local config = af.config
+config.init("ui", {
+	theme = { value = "sleek" },
+	accentColor = { value = { 0.5, 1, 1 } },
+})
+
+local accentR, accentG, accentB = unpack(config.get("ui", "accentColor"))
+
+local themeToRun = config.get("ui", "theme")
+if af.themes[themeToRun] then
+	af.selectedTheme = themeToRun
+	af.themes[themeToRun](accentR, accentG, accentB)
+else
+	af.selectedTheme = "sleek"
+	af.themes["sleek"](accentR, accentG, accentB)
+end
 
 local function renderOverlay()
 	if imgui.begin_tab_bar("Categories") then
@@ -104,28 +53,33 @@ local function renderOverlay()
 
 							if open then
 								for optionName, optionData in pairs(af.config.cache[moduleName]) do
+									imgui.indent(28)
 									if type(optionData.value) == "boolean" then
-										imgui.indent(28)
 										local changed, value = imgui.checkbox(optionName, optionData.value)
-										imgui.unindent(28)
 										if changed then
 											af.config.set(moduleName, optionName, value)
 										end
 									elseif type(optionData.value) == "number" then
-										imgui.indent(28)
 										local changed, value = imgui.slider_float(
 											optionName,
 											optionData.value,
 											optionData.min or 0,
 											optionData.max or 100
 										)
-										imgui.unindent(28)
 
 										if changed then
 											--TODO: write this mf or track changed, its possible its true every frame
 											af.config.set(moduleName, optionName, value, true)
 										end
+									elseif optionData.type == "color" then
+										local col = optionData.value
+										local changed, r, g, b = imgui.color_edit4(optionName, col[1], col[2], col[3], 1)
+
+										if changed then
+											af.config.set(moduleName, optionName, {r, g, b}, true)
+										end
 									end
+									imgui.unindent(28)
 								end
 							end
 
@@ -152,12 +106,28 @@ local function renderOverlay()
 		--settings tab
 
 		if imgui.begin_tab_item("settings") then
-			local changed, r, g, b = imgui.color_edit4("", tr, tg, tb, 1)
+			if imgui.button("Flush/Save all configs") then
+				af.config.saveAll()
+			end
+
+			if imgui.begin_combo("Theme", af.selectedTheme) then
+				for i, name in ipairs(af.themeList) do
+					if imgui.selectable(name) then
+						af.selectedTheme = name
+						config.set("ui", "theme", name)
+						af.themes[name](accentR, accentG, accentB)
+					end
+				end
+				imgui.end_combo()
+			end
+
+			local changed, r, g, b = imgui.color_edit4("Accent Color", accentR, accentG, accentB, 1)
 
 			if changed then
-				applyTheme(tr, tg, tb)
-				af.brand.color = Color(tr * 255, tg * 255, tb * 255)
-				tr, tg, tb = r, g, b
+				af.themes[af.selectedTheme](accentR, accentG, accentB)
+				af.brand.color = Color(accentR * 255, accentG * 255, accentB * 255)
+				config.set("ui", "accentColor", { r, g, b }, true)
+				accentR, accentG, accentB = r, g, b
 			end
 
 			--if imgui.collapsing_header("Settings") then

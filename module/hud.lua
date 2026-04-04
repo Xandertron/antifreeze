@@ -11,22 +11,24 @@ config.init("hud", {
 	drawBrand = { value = true },
 	drawMemory = { value = true },
 	drawScreengrabWarning = { value = true },
+	drawColor = { value = { 0.5, 1, 1 }, type = "color" },
 })
 
 local function draw()
-	local curY = 10
 	surface.SetFont("ChatFont")
+	
+	local drawColor = config.get("hud", "drawColor")
+	surface.SetTextColor(drawColor[1]*255, drawColor[2]*255,drawColor[3]*255)
 
+	local curY = 10
 	if config.get("hud", "drawBrand") then
 		surface.SetTextPos(10, curY)
-		surface.SetTextColor(af.brand.color)
 		surface.DrawText("Antifreeze - " .. af.info.version .. " - LJE")
 		curY = curY + 20
 	end
 
 	if config.get("hud", "drawMemory") then
 		surface.SetTextPos(10, curY)
-		surface.SetTextColor(af.brand.color)
 		surface.DrawText(string.format("GC Memory: %s MB", tostring(math.Round(lje.gc.get_total() / 1000 / 1000, 2))))
 		curY = curY + 20
 	end
