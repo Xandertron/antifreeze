@@ -1,4 +1,11 @@
 local function applyTheme(r, g, b)
+
+	--dim out cyan, yellow, and magenta colors so text is still readable, and smoothly so no sudden jumps
+	local y = r * 0.299 + g * 0.587 + b * 0.114
+	local t = math.max(0, math.min(1, (y - 0.6) / 0.4))
+	local f = 1 - (t * t * (3 - 2 * t)) * 0.25
+	r, g, b = r * f, g * f, b * f
+	
 	imgui.set_style({
 		colors = {
 			-- Text
