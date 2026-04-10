@@ -17,6 +17,17 @@ af.brand.watermark = [[
 ]]
 af.brand.color = Color(127, 255, 255)
 
+noop = function() end
+begin_track = lje.gc.begin_track()
+end_track = lje.gc.end_track()
+
+af.enableGCStealth = false
+
+if not af.enableGCStealth then
+	begin_track = noop
+	end_track = noop
+end
+
 lje.include("service/concommand.lua")
 
 local function coerce(str)
@@ -273,11 +284,10 @@ if af.debug then
 	af.printTable(config.cache)
 end
 
-
 local ui = lje.include("service/ui.lua")
 
 hook.pre("ljeutil/render", "antifreeze.ui", function()
-	lje.gc.begin_track()
+	begin_track()
 	if not af.ignoreMainMenu and gui.IsGameUIVisible() then
 		return
 	end
@@ -295,17 +305,17 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 
 	render.PopRenderTarget()
 	cam.End2D()
-	lje.gc.end_track()
+	end_track()
 end)
 
 hook.pre("think", "antifreeze.think", function()
-	lje.gc.begin_track()
+	begin_track()
 	for moduleName, thinkFunction in pairs(moduleHooks.think) do
 		if af.modules[moduleName].enabled then
 			thinkFunction()
 		end
 	end
-	lje.gc.end_track()
+	end_track()
 end)
 
 local FREEZE_BUTTONS = 0
@@ -325,7 +335,7 @@ local function freezeButtons(buttons)
 end
 
 hook.pre("CreateMove", "antifreeze.move", function(cmd)
-	lje.gc.begin_track()
+	begin_track()
 	for moduleName, moveFunction in pairs(moduleHooks.move) do
 		if af.modules[moduleName].enabled then
 			moveFunction(cmd)
@@ -339,7 +349,7 @@ hook.pre("CreateMove", "antifreeze.move", function(cmd)
 		cmd:SetButtons(freezeButtons(cmd:GetButtons()))
 		cmd:SetViewAngles(af.modules.freecam.startAngles)
 	end
-	lje.gc.end_track()
+	end_track()
 end)
 
 hook.pre("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang)

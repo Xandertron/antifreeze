@@ -16,8 +16,14 @@ config.init("esp", {
 })
 
 esp.studiorender_flags = bit.bor(STUDIO_RENDER, STUDIO_NOSHADOWS, STUDIO_STATIC_LIGHTING)
+esp.materialPath = config.get("esp", "playerMaterial")
+esp.material = Material(esp.materialPath)
 
 local function draw()
+	if esp.materialPath ~= config.get("esp", "playerMaterial") then
+		esp.materialPath = config.get("esp", "playerMaterial")
+		esp.material = Material(esp.materialPath)
+	end
 	for _, ply in ipairs(player.GetAll()) do
 		if
 			ply:IsValid()
@@ -86,9 +92,9 @@ local function draw()
 			end
 
 			render.SuppressEngineLighting(true)
-			render.MaterialOverride(config.get("esp", "playerMaterial"))
+			render.MaterialOverride(esp.material)
 			local oldR, oldG, oldB = render.GetColorModulation()
-			local r = LocalPlayer():GetPos():Distance(ply:GetPos()) / config.get("esp", "maxDistance")
+			local r = LocalPlayer():GetPos():Distance(ply:GetPos()) / 2000
 			render.SetColorModulation(1 - (r * r * r), 1, 0)
 			local blend = config.get("esp", "transparency")
 			if blend > 0 then

@@ -73,10 +73,25 @@ local function renderOverlay()
 										end
 									elseif optionData.type == "color" then
 										local col = optionData.value
-										local changed, r, g, b = imgui.color_edit4(optionName, col[1], col[2], col[3], 1)
+										local changed, r, g, b =
+											imgui.color_edit4(optionName, col[1], col[2], col[3], 1)
 
 										if changed then
-											af.config.set(moduleName, optionName, {r, g, b}, true)
+											af.config.set(moduleName, optionName, { r, g, b }, true)
+										end
+									elseif optionData.type == "selection" then
+										if imgui.begin_combo(optionName, optionData.value) then
+											for i, name in ipairs(optionData.options) do
+												if imgui.selectable(name) then
+													config.set(moduleName, optionName, name)
+												end
+											end
+											imgui.end_combo()
+										end
+									elseif type(optionData.value) == "string" then
+										local changed, text = imgui.input_text(optionName, optionData.value)
+										if changed then
+											af.config.set(moduleName, optionName, text, true)
 										end
 									end
 									imgui.unindent(28)

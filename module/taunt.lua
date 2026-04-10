@@ -10,8 +10,8 @@ local config = af.config
 config.init("taunt", {
 	onDeath = { value = true },
 	onKill = { value = true },
-	tauntType = { value = "main" },
-	swapWord = { value = "@target"}
+	tauntType = { value = "main", options = { "main", "bro", "xbox", "swap", "targeted" }, type = "selection" },
+	swapWord = { value = "@target" },
 })
 
 taunt.data = lje.include("util/taunt.lua")
