@@ -14,7 +14,7 @@ config.init("taunt", {
 	swapWord = { value = "@target"}
 })
 
-taunt.data = lje.include("service/taunt.lua")
+taunt.data = lje.include("util/taunt.lua")
 
 local generators = {
 	main = function()

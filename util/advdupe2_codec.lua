@@ -201,16 +201,16 @@ end
 
 enc[TYPE_VECTOR] = function(obj) --vector
 	buff:WriteByte(250)
-	buff:WriteDouble(obj.x)
-	buff:WriteDouble(obj.y)
-	buff:WriteDouble(obj.z)
+	buff:WriteDouble(obj[1])
+	buff:WriteDouble(obj[2])
+	buff:WriteDouble(obj[3])
 end
 
 enc[TYPE_ANGLE] = function(obj) --angle
 	buff:WriteByte(249)
-	buff:WriteDouble(obj.p)
-	buff:WriteDouble(obj.y)
-	buff:WriteDouble(obj.r)
+	buff:WriteDouble(obj[1])
+	buff:WriteDouble(obj[2])
+	buff:WriteDouble(obj[3])
 end
 
 enc[TYPE_STRING] = function(obj) --string
@@ -255,103 +255,5 @@ end
 End AdvDupe2 Code
 -------------------------------------
 ]]
-
---[[
-entTable = {
-	[234] = {
-		worldPos = { x = 0, y = 0, z = 100 },
-		worldAng = { p = 90, y = 0, r = 0 },
-		color = { r = 255, g = 3, b = 255 },
-		model = "models/balloons/balloon_classicheart.mdl",
-		material = "sprops/sprops_grid_12x12",
-		class = "prop_physics",
-		mass = 250,
-		frozen = true,
-	}
-}
-]]
-
-function AD2.tableToDupe(entTable)
-	local dupe = {
-		Entities = {},
-		Constraints = {},
-		HeadEnt = nil,
-	}
-
-	local headIndex
-	for k in pairs(entTable) do
-		headIndex = k
-		break
-	end
-	assert(headIndex, "entTable is empty")
-
-	local headEnt = entTable[headIndex]
-	local headPos = Vector(headEnt.worldPos.x, headEnt.worldPos.y, headEnt.worldPos.z)
-	local headAng = Angle(headEnt.worldAng.p or 0, headEnt.worldAng.y or 0, headEnt.worldAng.r or 0)
-
-	dupe.HeadEnt = {
-		Index = headIndex,
-		Pos = headPos,
-		Z = headAng.p,
-	}
-
-	for entIndex, ent in pairs(entTable) do
-		local worldPos = Vector(ent.worldPos.x, ent.worldPos.y, ent.worldPos.z)
-		local worldAng = Angle(
-			ent.worldAng and ent.worldAng.p or 0,
-			ent.worldAng and ent.worldAng.y or 0,
-			ent.worldAng and ent.worldAng.r or 0
-		)
-
-		local localPos = worldPos - headPos
-		local localAng = worldAng - headAng
-
-		local phys = {
-			Pos = localPos,
-			Angle = localAng,
-			Frozen = ent.frozen ~= nil and ent.frozen or true,
-		}
-
-		local entMods = {}
-
-		if ent.color then
-			entMods.colour = {
-				Color = {
-					r = ent.color.r or 255,
-					g = ent.color.g or 255,
-					b = ent.color.b or 255,
-					a = ent.color.a or 255,
-				},
-				RenderMode = 0,
-				RenderFX = 0,
-			}
-		end
-
-		if ent.material then
-			entMods.material = {
-				MaterialOverride = ent.material,
-			}
-		end
-
-		if ent.mass then
-			entMods.mass = {
-				Mass = ent.mass,
-			}
-		end
-
-		dupe.Entities[entIndex] = {
-			Class = ent.class or "prop_physics",
-			Model = ent.model or "models/error.mdl",
-
-			PhysicsObjects = {
-				[0] = phys,
-			},
-
-			EntityMods = next(entMods) and entMods or nil,
-		}
-	end
-
-	return dupe
-end
 
 return AD2

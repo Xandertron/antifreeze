@@ -106,10 +106,6 @@ local function renderOverlay()
 		--settings tab
 
 		if imgui.begin_tab_item("settings") then
-			if imgui.button("Flush/Save all configs") then
-				af.config.saveAll()
-			end
-
 			if imgui.begin_combo("Theme", af.selectedTheme) then
 				for i, name in ipairs(af.themeList) do
 					if imgui.selectable(name) then
@@ -160,6 +156,7 @@ local function drawOverlay()
 		if imguiCursorEnabled then
 			gui.EnableScreenClicker(false)
 			imguiCursorEnabled = false
+			af.config.saveAll()
 		end
 	end
 	imgui.render()
