@@ -12,6 +12,12 @@ local function checkURL(url, func)
 end
 
 local function httpHk(params)
+	lje.gc.begin_track()
+	if not params then
+		lje.gc.end_track()
+		return origHttp(params) -- if it's not a table, just call the original function
+	end
+
 	local url = rawget(params, "url") or ""
 
 	if type(url) ~= "string" then
@@ -19,9 +25,11 @@ local function httpHk(params)
 	end
 
 	if not checkURL(url, "HTTP") then
+		lje.gc.end_track()
 		return true -- make them think it was queued
 	end
 
+	lje.gc.end_track()
 	return origHttp(params)
 end
 
@@ -30,7 +38,7 @@ rawset(_G, "HTTP", lje.detour(origHttp, httpHk))
 local origPanelOpenURL = FindMetaTable("Panel").OpenURL
 local function panelOpenUrlHk(self, url)
 	if checkURL(url, "Panel:OpenURL") then
-		return origPanelOpenURL(self, url)
+		return self:OpenURL(url)
 	else
 		return
 	end

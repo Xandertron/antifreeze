@@ -7,23 +7,28 @@ config.data = config.data or {} --initial data
 config.cache = config.cache or {} --active data
 local namespace = "antifreeze"
 
+local dirty = {}
+
 function config.init(configName, configData)
 	config.data[configName] = configData
 	config.load(configName)
 end
 
 function config.save(configName)
-	
 	local configJson = util.TableToJSON(config.cache[configName], true)
 	lje.data.write(string.format("%s_%s_config", namespace, configName), configJson)
 end
 
 function config.saveAll()
-	af.log("Saving all configurations")
-	for configName, configData in pairs(config.cache) do
-		local configJson = util.TableToJSON(configData, true)
-		lje.data.write(string.format("%s_%s_config", namespace, configName), configJson)
+	local anySaved = false
+	for configName, isDirty in pairs(dirty) do
+		if isDirty then
+			local configJson = util.TableToJSON(config.cache[configName], true)
+			lje.data.write(string.format("%s_%s_config", namespace, configName), configJson)
+			anySaved = true
+		end
 	end
+	if anySaved then af.log("Saving all configurations") end
 end
 
 function config.load(configName)
@@ -87,7 +92,9 @@ function config.set(configName, key, newValue, temp)
 		end
 
 		conf[key].value = newValue
-		if not temp then
+		if temp then
+			dirty[configName] = true
+		else
 			config.save(configName)
 		end
 		return newValue

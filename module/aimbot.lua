@@ -11,6 +11,7 @@ local pid = lje.include("util/pid.lua")
 local config = af.config
 config.init("aimbot", {
 	minDistance = { value = 1000, min = 0, max = 30000 },
+	triggerBot = { value = false },
 
 	pitchResponseP = { value = 35, min = -180, max = 180 },
 	pitchResponseD = { value = 0.25, min = -180, max = 180 },
@@ -59,7 +60,11 @@ if not aimbot.bind_code then
 	aimbot.bind_code = KEY_H
 end
 
-local function draw()
+local sensitivity = GetConVar_Internal("sensitivity"):GetFloat()
+local myaw = GetConVar_Internal("m_yaw"):GetFloat()
+local mpitch = GetConVar_Internal("m_pitch"):GetFloat()
+
+local function move(cmd)
 	-- update pids
 	aimbot.pitch_pid.kp = config.get("aimbot", "pitchResponseP")
 	aimbot.yaw_pid.kp = config.get("aimbot", "yawResponseP")
@@ -109,6 +114,20 @@ local function draw()
 		end
 	end
 
+	if config.get("aimbot", "triggerBot") then
+		local eyeTraceData = {
+			start = LocalPlayer():EyePos(),
+			endpos = LocalPlayer():EyePos() + (LocalPlayer():GetAimVector() * 32768),
+			filter = LocalPlayer(),
+			mask = MASK_SHOT_HULL,
+		}
+
+		local eyeTrace = util.TraceLine(eyeTraceData)
+		if eyeTrace.Hit and eyeTrace.Entity == aimbot.target then
+			cmd:AddKey(IN_ATTACK)
+		end
+	end
+
 	if aimbot.target and aimbot.target:Alive() then
 		local lp = LocalPlayer()
 
@@ -140,9 +159,13 @@ local function draw()
 
 		local pitchOutput = aimbot.pitch_pid:compute(pitchTarget, currentPitch, dt)
 		local yawOutput = aimbot.yaw_pid:compute(yawTarget, currentYaw, dt)
+
 		currentViewAngles:SetUnpacked(currentPitch + pitchOutput * dt, currentYaw + yawOutput * dt, 0)
-		lp:SetEyeAngles(currentViewAngles)
+
+		cmd:SetViewAngles(currentViewAngles)
+		cmd:SetMouseX((currentViewAngles[2] - currentYaw) / (sensitivity * myaw))
+		cmd:SetMouseY((currentViewAngles[1] - currentPitch) / (sensitivity * mpitch))
 	end
 end
 
-return aimbot, { draw = draw }
+return aimbot, { move = move }
