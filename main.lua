@@ -1,7 +1,7 @@
 local af = af or {}
 
 af.info = {}
-af.info.version = "1.2.0"
+af.info.version = "1.3.0"
 af.info.name = "Antifreeze"
 
 af.brand = {}
