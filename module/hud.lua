@@ -10,6 +10,8 @@ local config = af.config
 config.init("hud", {
 	drawBrand = { value = true },
 	drawMemory = { value = true },
+	drawVelocity = { value = false},
+
 	drawScreengrabWarning = { value = true },
 	drawColor = { value = { 0.5, 1, 1 }, type = "color" },
 })
@@ -30,6 +32,12 @@ local function draw()
 	if config.get("hud", "drawMemory") then
 		surface.SetTextPos(10, curY)
 		surface.DrawText(string.format("GC Memory: %s MB", tostring(math.Round(lje.gc.get_total() / 1000 / 1000, 2))))
+		curY = curY + 20
+	end
+
+	if config.get("hud", "drawVelocity") then
+		surface.SetTextPos(10, curY)
+		surface.DrawText(string.format("Velocity: %s u/s", tostring(math.Round(LocalPlayer():GetVelocity():Length()))))
 		curY = curY + 20
 	end
 

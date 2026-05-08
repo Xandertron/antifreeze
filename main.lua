@@ -1,7 +1,7 @@
 local af = af or {}
 
 af.info = {}
-af.info.version = "1.3.0"
+af.info.version = "1.4.0"
 af.info.name = "Antifreeze"
 
 af.brand = {}
@@ -202,7 +202,7 @@ end)
 --hooks for modules to supply
 local moduleHooks = {
 	draw = {}, --rendering hooks
-	think = {}, --doesnt work? wtf
+	think = {},
 	move = {},
 }
 
@@ -308,7 +308,7 @@ hook.pre("ljeutil/render", "antifreeze.ui", function()
 	end_track()
 end)
 
-hook.pre("think", "antifreeze.think", function()
+hook.pre("Think", "antifreeze.think", function()
 	begin_track()
 	for moduleName, thinkFunction in pairs(moduleHooks.think) do
 		if af.modules[moduleName].enabled then

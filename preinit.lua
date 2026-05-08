@@ -21,3 +21,4 @@ end
 lje.require("module/antiscreengrab.lua")
 lje.require("detour/concommand.lua")
 lje.require("detour/http.lua")
+af.nog = lje.require("detour/net.lua")

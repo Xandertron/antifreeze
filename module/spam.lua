@@ -15,7 +15,7 @@ config.init("spam", {
 
 local useOn = false
 
-local function draw()
+local function think()
 	if config.get("spam", "flashlight") and input.IsKeyDown(KEY_F) then
 		RunConsoleCommand("impulse", "100")
 	end
@@ -37,4 +37,4 @@ local function move(cmd)
 	end
 end
 
-return spam, { draw = draw, move = move }
+return spam, { think = think, move = move }

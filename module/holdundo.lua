@@ -18,7 +18,7 @@ end
 local undoDownTimer = 0
 local undoFireTimer = 0
 
-local function draw()
+local function think()
 	if not holdundo.enabled then
 		return
 	end
@@ -47,4 +47,4 @@ local function draw()
 	end
 end
 
-return holdundo, { draw = draw }
+return holdundo, { think = think }
