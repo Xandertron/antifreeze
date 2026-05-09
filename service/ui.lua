@@ -31,7 +31,9 @@ else
 	af.themes["sleek"](accentR, accentG, accentB)
 end
 
-local netAutoScroll = true
+local netAutoScroll = false
+local netFilter = ""
+local netFilterInvert = false
 
 local function renderOverlay()
 	if imgui.begin_tab_bar("Categories") then
@@ -155,11 +157,12 @@ local function renderOverlay()
 		--net tab
 
 		if imgui.begin_tab_item("net") then
-			imgui.begin_child("log", 0, -30, imgui.ChildFlags_AutoResizeY)
+			imgui.begin_child("log", 0, -58, imgui.ChildFlags_AutoResizeY)
 
 			imgui.push_font(lucida)
 
 			for _, line in ipairs(af.nog.logs) do
+				if (string.find(line.name, netFilter) == nil) ~= netFilterInvert then continue end
 				imgui.separator()
 				if line.direction == "send" then
 					imgui.text_colored(1, 0.945, 0.482, 1, "▲")
@@ -180,25 +183,41 @@ local function renderOverlay()
 
 			imgui.pop_font()
 
-			if autoScroll then
+			if netAutoScroll then
 				imgui.set_scroll_here_y(1.0) -- scroll to bottom
 			end
 
 			imgui.end_child()
+			
+			imgui.set_next_item_width(200)
+			local changed, text = imgui.input_text("Filter", netFilter)
+			netFilter = text
 
-			local _, checked = imgui.checkbox("Auto Scroll", autoScroll)
-			autoScroll = checked
 			imgui.same_line()
+
+			local _, checked = imgui.checkbox("Invert", netFilterInvert)
+			netFilterInvert = checked
+
+			--next line
+
+			local _, checked = imgui.checkbox("Auto Scroll", netAutoScroll)
+			netAutoScroll = checked
+
+			imgui.same_line()
+
 			imgui.set_next_item_width(120)
 			local changed, maxEntries = imgui.input_int("Max Entries", af.nog.maxEntries)
 			if changed then
 				af.nog.maxEntries = maxEntries
 				af.nog.trimEntries()
 			end
+
 			imgui.same_line()
+
 			if imgui.button("Clear Log") then
 				af.nog.clear()
 			end
+
 			imgui.end_tab_item()
 		end
 

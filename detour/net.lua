@@ -2,7 +2,6 @@ local nog = nog or {}
 nog.logs = nog.logs or {}
 nog.current = nil
 nog.maxEntries = 100
-nog.blacklistedNames = { "URPC" } --todo, make ui for this
 
 function nog.trimEntries()
     local excess = #nog.logs - nog.maxEntries or 100
