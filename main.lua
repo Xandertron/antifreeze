@@ -1,7 +1,7 @@
 local af = af or {}
 
 af.info = {}
-af.info.version = "1.4.0"
+af.info.version = "1.4.1"
 af.info.name = "Antifreeze"
 
 af.brand = {}
@@ -318,22 +318,6 @@ hook.pre("Think", "antifreeze.think", function()
 	end_track()
 end)
 
-local FREEZE_BUTTONS = 0
-	+ IN_FORWARD
-	+ IN_BACK
-	+ IN_MOVELEFT
-	+ IN_MOVERIGHT
-	+ IN_JUMP
-	+ IN_DUCK
-	+ IN_SPEED
-	+ IN_WALK
-	+ IN_ATTACK
-	+ IN_ATTACK2
-
-local function freezeButtons(buttons)
-	return bit.band(buttons, bit.bnot(FREEZE_BUTTONS))
-end
-
 hook.pre("CreateMove", "antifreeze.move", function(cmd)
 	begin_track()
 	for moduleName, moveFunction in pairs(moduleHooks.move) do
@@ -341,25 +325,7 @@ hook.pre("CreateMove", "antifreeze.move", function(cmd)
 			moveFunction(cmd)
 		end
 	end
-
-	--todo: move to freecam module
-	if af.modules.freecam.enabled then
-		--clear movement so we're not walking off cliffs while freecaming
-		cmd:ClearMovement()
-		cmd:SetButtons(freezeButtons(cmd:GetButtons()))
-		cmd:SetViewAngles(af.modules.freecam.startAngles)
-	end
 	end_track()
-end)
-
-hook.pre("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang)
-	if af.modules.freecam.enabled then
-		cmd:SetMouseX(0)
-		cmd:SetMouseY(0)
-
-		af.modules.freecam.currentAngles[1] = math.Clamp(af.modules.freecam.currentAngles[1] + y / 50, -89, 89)
-		af.modules.freecam.currentAngles[2] = af.modules.freecam.currentAngles[2] - x / 50
-	end
 end)
 
 lje.con_printf("$cyan{\n" .. af.brand.watermark .. "\n}")

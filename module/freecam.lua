@@ -30,7 +30,7 @@ function freecam.onEnable()
 	freecam.currentAngles = Angle(LocalPlayer():EyeAngles())
 end
 
-hook.pre("Think", "antifreeze.freecam.movement", function()
+local function think()
 	if not freecam.enabled then
 		return
 	end
@@ -72,6 +72,41 @@ hook.pre("Think", "antifreeze.freecam.movement", function()
 
 	--freecam.currentFOV = math.Clamp(freecam.current_fov - (deltaScroll * 10), 30, 120)
 	--freecam.lerpFOV = lerp(freecam.lerpFOV, freecam.currentFOV, 0.1)
+end
+
+local FREEZE_BUTTONS = 0
+	+ IN_FORWARD
+	+ IN_BACK
+	+ IN_MOVELEFT
+	+ IN_MOVERIGHT
+	+ IN_JUMP
+	+ IN_DUCK
+	+ IN_SPEED
+	+ IN_WALK
+	+ IN_ATTACK
+	+ IN_ATTACK2
+
+local function freezeButtons(buttons)
+	return bit.band(buttons, bit.bnot(FREEZE_BUTTONS))
+end
+
+local function move(cmd)
+	if freecam.enabled then
+		--clear movement so we're not walking off cliffs while freecaming
+		cmd:ClearMovement()
+		cmd:SetButtons(freezeButtons(cmd:GetButtons()))
+		cmd:SetViewAngles(freecam.startAngles)
+	end
+end
+
+hook.pre("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang)
+	if freecam.enabled then
+		cmd:SetMouseX(0)
+		cmd:SetMouseY(0)
+
+		freecam.currentAngles[1] = math.Clamp(freecam.currentAngles[1] + y / 50, -89, 89)
+		freecam.currentAngles[2] = freecam.currentAngles[2] - x / 50
+	end
 end)
 
 hook.post("CalcView", "antifreeze.freecam.render", function(ply, pos, angles, fov)
@@ -85,4 +120,4 @@ hook.post("CalcView", "antifreeze.freecam.render", function(ply, pos, angles, fo
 	end
 end)
 
-return freecam
+return freecam, { think = think, move = move }
