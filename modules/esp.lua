@@ -8,7 +8,7 @@ esp.moduleInfo = {
 
 local cfg = af.config.register("esp", {
 	material = { value = "models/shiny" },
-	transparency = { value = 0.1, min = 0, max = 1 },
+	transparency = { value = 0.3, min = 0, max = 1 },
 	drawModels = { value = true },
 	drawAimLines = { value = true },
 	drawPropHuntX = { value = true },
@@ -37,6 +37,8 @@ function esp:getTeamInfo(ply)
 	local teamId = ply:Team()
 	return esp.teams[teamId]
 end
+
+local notseen = {}
 
 function esp:render()
 	if not self.teams then
@@ -71,11 +73,11 @@ function esp:render()
 			local oldR, oldG, oldB = render.GetColorModulation()
 			local r = LocalPlayer():GetPos():Distance(ply:GetPos()) / 2000
 			render.SetColorModulation(0.5, 1, 1)
-			if cfg.drawPropHuntX then
-				local prop = ply:GetNWEntity("PlayerPropEntity", nil)
-				if prop ~= nil and prop:IsValid() then
-					prop:DrawModel()
-				end
+			render.SetBlend(cfg.transparency)
+			
+			local prop = ply:GetNWEntity("PlayerPropEntity", nil)
+			if prop ~= nil and prop:IsValid() then
+				prop:DrawModel()
 			end
 
 			if cfg.drawModels then
@@ -95,7 +97,7 @@ function esp:render()
 			end
 		end
 		cam.End()
-    
+
 		--draw info text
 		surface.SetDrawColor(255, 0, 255, 255)
 		surface.DrawOutlinedRect(screenPos.x - 5, screenPos.y - 5, 10, 10)
