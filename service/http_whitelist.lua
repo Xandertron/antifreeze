@@ -52,7 +52,7 @@ local whitelist = {
 
 	-- Backblaze B2
 	--- Examples:
-	--- https://f002.backblazeb2.com/file/djje-CDN/ShareX/0221/1613775658.png
+	---  https://f002.backblazeb2.com/file/djje-CDN/ShareX/0221/1613775658.png
 	pattern([[(%w+)%.backblazeb2%.com/(.+)]]),
 
 	-- Imgur
@@ -60,9 +60,14 @@ local whitelist = {
 	---  http://i.imgur.com/abcd123.xxx
 	simple([[i.imgur.com]]),
 
+	-- ImgBB
+	--- Examples:
+	---  https://i.ibb.co/DPGnzb0x/q5hMTPm.jpg
+	simple([[https://i.ibb.co]]),
+
 	-- Gyazo
 	--- Examples:
-	--- https://i.gyazo.com/c3eb33a90ada4de716100e7491fa1a8d.png
+	---  https://i.gyazo.com/c3eb33a90ada4de716100e7491fa1a8d.png
 	simple([[i.gyazo.com]]),
 
 	-- pastebin

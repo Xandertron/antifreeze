@@ -13,6 +13,7 @@ config.init("esp", {
 	playerMaterial = { value = "models/shiny" },
 	drawNames = { value = true },
 	drawWireframe = { value = false },
+	drawPropHuntX = { value = false },
 })
 
 esp.studiorender_flags = bit.bor(STUDIO_RENDER, STUDIO_NOSHADOWS, STUDIO_STATIC_LIGHTING)
@@ -37,10 +38,53 @@ local function draw()
 				plyPos = ply:GetBonePosition(hitboxBoneId)
 			end
 
+			--causes flickering on prophunt, doesnt really matter anyways
+
 			-- Same check for error models, if its equal to their origin, we have no bones, so lift it
-			if plyPos == ply:GetPos() then
-				plyPos = ply:GetPos() + Vector(0, 0, 50)
+			--if plyPos == ply:GetPos() then
+			--	plyPos = ply:GetPos() + Vector(0, 0, 50)
+			--end
+
+			local drawColor = config.get("hud", "drawColor")
+
+			cam.Start({ type = "3D" })
+
+			if config.get("esp", "drawWireframe") then
+				local localMin, localMax = ply:OBBMins(), ply:OBBMaxs()
+				render.DrawWireframeBox(
+					ply:GetPos(),
+					Angle(0, 0, 0),
+					localMin,
+					localMax,
+					Color(drawColor[1] * 255, drawColor[2] * 255, drawColor[3] * 255, 100),
+					false
+				)
 			end
+
+			render.SuppressEngineLighting(true)
+			render.MaterialOverride(esp.material)
+			local oldR, oldG, oldB = render.GetColorModulation()
+			local r = LocalPlayer():GetPos():Distance(ply:GetPos()) / 2000
+			render.SetColorModulation(1 - (r * r * r), 1, 0)
+			local blend = config.get("esp", "transparency")
+			if blend > 0 then
+				render.SetBlend(blend)
+				if config.get("esp", "drawPropHuntX") then
+					local prop = ply:GetNWEntity("PlayerPropEntity", nil)
+					if prop:IsValid() then
+						lje.util.safe_draw_model(prop, esp.studiorender_flags)
+					else
+						lje.util.safe_draw_model(ply, esp.studiorender_flags)
+					end
+				else
+					lje.util.safe_draw_model(ply, esp.studiorender_flags)
+				end
+			end
+			render.MaterialOverride(nil)
+			render.SetColorModulation(oldR, oldG, oldB)
+			render.SuppressEngineLighting(false)
+
+			cam.End()
 
 			local pt1 = plyPos:ToScreen()
 
@@ -48,7 +92,6 @@ local function draw()
 			local y1 = pt1.y - 7.5
 			local w = 15
 			local h = 15
-			local drawColor = config.get("hud", "drawColor")
 
 			if config.get("esp", "drawNames") then
 				surface.SetDrawColor(drawColor[1] * 255, drawColor[2] * 255, drawColor[3] * 255, 255)
@@ -76,36 +119,6 @@ local function draw()
 					end
 				end
 			end
-
-			cam.Start({ type = "3D" })
-
-			if config.get("esp", "drawWireframe") then
-				local localMin, localMax = ply:OBBMins(), ply:OBBMaxs()
-				render.DrawWireframeBox(
-					ply:GetPos(),
-					Angle(0, 0, 0),
-					localMin,
-					localMax,
-					Color(drawColor[1] * 255, drawColor[2] * 255, drawColor[3] * 255, 100),
-					false
-				)
-			end
-
-			render.SuppressEngineLighting(true)
-			render.MaterialOverride(esp.material)
-			local oldR, oldG, oldB = render.GetColorModulation()
-			local r = LocalPlayer():GetPos():Distance(ply:GetPos()) / 2000
-			render.SetColorModulation(1 - (r * r * r), 1, 0)
-			local blend = config.get("esp", "transparency")
-			if blend > 0 then
-				render.SetBlend(blend)
-				lje.util.safe_draw_model(ply, esp.studiorender_flags)
-			end
-			render.MaterialOverride(nil)
-			render.SetColorModulation(oldR, oldG, oldB)
-			render.SuppressEngineLighting(false)
-
-			cam.End()
 		end
 	end
 end
