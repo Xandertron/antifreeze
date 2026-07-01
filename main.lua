@@ -1,8 +1,12 @@
-local af = af or {}
+af = af or {}
 
 af.info = {}
-af.info.version = "1.4.2"
+af.info.version = "2.0.0"
 af.info.name = "Antifreeze"
+
+local print = lje.con_printf
+local inspect = lje.util.inspect
+hook._listeners.antifreeze = {}
 
 af.brand = {}
 af.brand.watermark = [[
@@ -18,314 +22,153 @@ af.brand.watermark = [[
 af.brand.color = Color(127, 255, 255)
 
 noop = function() end
-begin_track = lje.gc.begin_track()
-end_track = lje.gc.end_track()
 
-af.enableGCStealth = false
+af.config = lje.include("lib/config.lua")
+af.log = lje.include("lib/log.lua")
+lje.include("service/ui.lua")
 
-if not af.enableGCStealth then
-	begin_track = noop
-	end_track = noop
+local settings = lje.settings.open()
+local httpDetour
+local openUrlDetour
+
+if settings:get("block.http", true) then
+	httpDetour = lje.include("detours/http.lua")
 end
 
-lje.include("service/concommand.lua")
-
-local function coerce(str)
-	if type(str) ~= "string" then
-		return str
-	end
-
-	local lower = string.lower(str)
-
-	if lower == "true" then
-		return true
-	end
-	if lower == "false" then
-		return false
-	end
-	if lower == "nil" then
-		return nil
-	end
-
-	local num = tonumber(str)
-	if num ~= nil then
-		return num
-	end
-
-	return str
+if settings:get("block.openurl", true) then
+	openUrlDetour = lje.include("detours/openurl.lua")
 end
 
-local function getKeys(tbl)
-	local keys = {}
-	local id = 1
+local function getFnAddr(fn)
+	return ffi.mem.unwrap_userdata(ffi.mem.upvalue(fn, 1))
+end
 
-	for k, v in pairs(tbl) do
-		keys[id] = k
-		id = id + 1
+local renderCapture = getFnAddr(render.Capture)
+
+-- TODO: fix this and put it in a detour module
+if renderCaptureDetour then
+	renderCaptureDetour:remove()
+	renderCaptureDetour = nil
+end
+
+renderCaptureDetour, err = ffi.detour.create(
+	renderCapture,
+	[[
+#include <stdio.h>
+int (*original)(lua_State* L);
+int captureCounter = 0;
+
+int detour(lua_State* L) {
+  captureCounter++;
+  return original(L);
+}
+]]
+)
+
+local captureCounterPtr = renderCaptureDetour:get("captureCounter")
+ffi.mem.try_write_u32(captureCounterPtr, 0) -- Initialize counter to 0
+
+local lastCaptureCount = 0
+local lastCaptureTime = 0
+local function checkCapture()
+	local currentCount = ffi.mem.try_read_u32(captureCounterPtr)
+	if currentCount ~= nil and currentCount > lastCaptureCount then
+		lastCaptureCount = currentCount
+		lastCaptureTime = SysTime()
 	end
-
-	return keys
 end
 
 af.modules = af.modules or {}
-af.moduleSections = af.moduleSections or {}
+local modulesToLoad = lje.env.find_script_files("modules/*")
 
-local config = lje.require("service/config.lua")
-config.init("main", {
-	enabledModules = { value = {
-		esp = true,
-		aimbot = false,
-		bhop = false,
-		freecam = false,
-	} },
-})
+af.log("Found " .. #modulesToLoad .. " module(s) to load!")
 
-af.config = config
-
---too many sources of truth? main config and af.modules
-function af.switchModule(moduleName, switch, temp)
-	if not (moduleName and af.modules[moduleName]) then
-		print("[AF] That module doesnt exist!")
-		return nil
-	end
-
-	local moduleTable = af.modules[moduleName]
-	local state = moduleTable.enabled or false
-
-	-- toggle if switch is nil
-	if switch == nil then
-		switch = not state
-	end
-
-	-- no state change, nothing to do
-	if state == switch then
-		return switch
-	end
-
-	-- rising and falling edge
-	if not state and switch then
-		if moduleTable.onEnable then
-			moduleTable.onEnable()
-		end
-	elseif state and not switch then
-		if moduleTable.onDisable then
-			moduleTable.onDisable()
-		end
-	end
-
-	-- update runtime state
-	moduleTable.enabled = switch
-
-	-- persist state
-	local enabledModules = config.get("main", "enabledModules")
-	enabledModules[moduleName] = switch
-	config.set("main", "enabledModules", enabledModules, temp)
-	return switch
-end
-
-af.commands = af.commands or lje.include("service/commands.lua")
-af.commands.tree = {
-	info = function()
-		print(string.format("%s (version %s)", af.info.name, af.info.version))
-	end,
-	modules = {
-		list = function()
-			print(string.format("[AF] Modules:\n%s", table.concat(getKeys(af.modules), ", ")))
-		end,
-		info = function(moduleName)
-			local data = af.modules[moduleName]
-			if not data then
-				print("[AF] Unknown module!")
-			else
-				if data.moduleInfo then
-					print(
-						string.format(
-							"[AF] Info for %s:\nDescription: %s\nSection: %s",
-							data.moduleInfo.name,
-							data.moduleInfo.description,
-							data.moduleInfo.section
-						)
-					)
-				else
-					print("[AF] No other data for this module.")
-				end
-			end
-		end,
-		toggle = function(moduleName)
-			af.switchModule(moduleName, nil, true)
-		end,
-
-		enable = function(moduleName)
-			af.switchModule(moduleName, true, true)
-		end,
-
-		disable = function(moduleName)
-			af.switchModule(moduleName, false, true)
-		end,
-
-		["config"] = {
-			set = function(moduleName, key, value)
-				local value = coerce(value)
-				local ret = config.set(moduleName, key, value)
-				if type(ret) ~= type(value) then
-					print("[AF] Wrong type, expected: " .. type(ret))
-				elseif ret ~= value and ret and value and type(ret) == "number" then
-					print("[AF] Number was either too large or too small, please try again")
-				end
-			end,
-
-			list = function(moduleName)
-				if not moduleName then
-					print(
-						string.format(
-							"[AF] Configurable modules available:\n%s",
-							table.concat(getKeys(config.cache), ", ")
-						)
-					)
-				else
-					local output = ""
-					for optionName, optionData in pairs(config.cache[moduleName]) do
-						output = output .. string.format("\n%s: %s", optionName, tostring(optionData.value))
-					end
-					print(string.format("[AF] Options available:%s", output))
-				end
-			end,
-		},
-	},
-}
-af.commands.attachHelp(af.commands.tree, {})
-
-af.concmdAdd("antifreeze", "Main Antifreeze command", 0, function(_, _, args, argsStr)
-	af.commands.dispatch(af.commands.tree, args)
-end)
-
---hooks for modules to supply
-local moduleHooks = {
-	draw = {}, --rendering hooks
-	think = {},
-	move = {},
-}
-
-function af.loadModule(name, data, hooks)
+function af.loadModule(name, data)
 	if data == nil then
-		af.log("No data for: " .. name, af.level.WARN)
+		af.log("Skipping " .. name .. ", no data present!", "error")
 		return
 	end
+
+	data.enabled = true
 
 	af.modules[name] = data
-	af.modules[name].enabled = data.enabled or false
-
-	if data.moduleInfo then
-		local key = data.moduleInfo.section
-		if key ~= "none" then
-			key = key or "other" --handle non-defined sections
-			af.moduleSections[key] = af.moduleSections[key] or {}
-			af.moduleSections[key][name] = true
-		end
-	end
-
-	--enable modules if they were enabled before
-	local enabledModules = config.get("main", "enabledModules")
-	if enabledModules then
-		af.modules[name].enabled = enabledModules[name] or false
-	end
-
-	if hooks == nil then
-		af.log("No hooks!", af.level.debug)
-		return
-	end
-
-	for hook, func in pairs(hooks) do
-		if moduleHooks[hook] then
-			moduleHooks[hook][name] = func
-		else
-			af.log(name .. " tried to use an invalid hook: " .. hook, af.level.warn)
-		end
-	end
 end
-
-local modulesToLoad = lje.env.find_script_files("module/*")
 
 for idx, path in ipairs(modulesToLoad) do
-	local moduleName = string.match(path, "^module/([^/]+)%.lua$")
-	af.log("Loading internal module: " .. moduleName)
-	data, hooks = unpack({ lje.include(path) })
-	af.loadModule(moduleName, data, hooks)
+	local moduleName = string.match(path, "^modules/([^/]+)%.lua$")
+	data = unpack({ lje.include(path) })
+	if data then
+		af.log("Loading module: " .. data.moduleInfo.name)
+		af.loadModule(moduleName, data)
+	else
+		af.log("Skipping " .. moduleName .. ", no data present!", "error")
+	end
 end
 
-function af.printTable(t, indent, seen)
-	indent = indent or 0
-	seen = seen or {}
-
-	if seen[t] then
-		af.log(string.rep("  ", indent) .. "*cycle*", af.level.debug)
-		return
-	end
-	seen[t] = true
-
-	for k, v in pairs(t) do
-		local prefix = string.rep("  ", indent) .. tostring(k) .. ": "
-		if type(v) == "table" then
-			af.log(prefix .. "{", af.level.debug)
-			af.printTable(v, indent + 1, seen)
-			af.log(string.rep("  ", indent) .. "}", af.level.debug)
-		else
-			af.log(prefix .. tostring(v), af.level.debug)
+--
+hook.Add("CreateMove", "move", function(cmd)
+	for moduleName, moduleData in pairs(af.modules) do
+		if moduleData.move then
+			moduleData:move(cmd)
 		end
 	end
-end
+end)
 
-if af.debug then
-	af.log("modules:", af.level.debug)
-	af.printTable(af.modules)
-	af.log("module hooks:", af.level.debug)
-	af.printTable(moduleHooks)
-	af.log("config cache:", af.level.debug)
-	af.printTable(config.cache)
-end
-
-local ui = lje.include("service/ui.lua")
-
-hook.pre("ljeutil/render", "antifreeze.ui", function()
-	begin_track()
-	if not af.ignoreMainMenu and gui.IsGameUIVisible() then
+hook.Add("PostRender", "render", function()
+	if render.IsTakingScreenshot() then
 		return
+	end
+
+	checkCapture()
+	if httpDetour then
+		httpDetour:run()
+	end
+
+	for moduleName, moduleData in pairs(af.modules) do
+		if moduleData.run then
+			moduleData:run()
+		end
 	end
 
 	cam.Start2D()
-	render.PushRenderTarget(lje.util.rendertarget)
 
-	ui.drawOverlay()
+	if SysTime() - lastCaptureTime < 5 then
+		surface.SetTextColor(255, 255, 100, 255)
+		surface.SetTextPos(10, 20)
+		surface.DrawText("Screengrab detected!")
+	end
 
-	for moduleName, renderFunction in pairs(moduleHooks.draw) do
-		if af.modules[moduleName].enabled then
-			renderFunction()
+	for moduleName, moduleData in pairs(af.modules) do
+		if moduleData.render then
+			moduleData:render()
 		end
 	end
 
-	render.PopRenderTarget()
 	cam.End2D()
-	end_track()
 end)
 
-hook.pre("Think", "antifreeze.think", function()
-	begin_track()
-	for moduleName, thinkFunction in pairs(moduleHooks.think) do
-		if af.modules[moduleName].enabled then
-			thinkFunction()
-		end
-	end
-	end_track()
-end)
+hook.Listen(true)
 
-hook.pre("CreateMove", "antifreeze.move", function(cmd)
-	begin_track()
-	for moduleName, moveFunction in pairs(moduleHooks.move) do
-		if af.modules[moduleName].enabled then
-			moveFunction(cmd)
+lje.env.on_cleanup(function()
+	if renderCaptureDetour then
+		renderCaptureDetour:disable()
+		renderCaptureDetour = nil
+	end
+
+	if httpDetour then
+		httpDetour:cleanup()
+	end
+
+	if openUrlDetour then
+		openUrlDetour:cleanup()
+	end
+
+	for moduleName, moduleData in pairs(af.modules) do
+		if moduleData.cleanup then
+			af.log("Cleaning up " .. moduleName)
+			moduleData:cleanup()
 		end
 	end
-	end_track()
 end)
 
 lje.con_printf("$cyan{\n" .. af.brand.watermark .. "\n}")

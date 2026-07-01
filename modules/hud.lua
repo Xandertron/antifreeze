@@ -1,4 +1,4 @@
-local hud = hud or {}
+local hud = {}
 
 hud.moduleInfo = {
 	name = "HUD",
@@ -6,49 +6,62 @@ hud.moduleInfo = {
 	section = "render",
 }
 
-local config = af.config
-config.init("hud", {
+local cfg = af.config.register("hud", {
 	drawBrand = { value = true },
 	drawMemory = { value = true },
-	drawVelocity = { value = false},
-
+	drawVelocity = { value = true },
+	drawModules = { value = true },
 	drawScreengrabWarning = { value = true },
+
 	drawColor = { value = { 0.5, 1, 1 }, type = "color" },
 })
 
-local function draw()
+function hud:render()
 	surface.SetFont("ChatFont")
-	
-	local drawColor = config.get("hud", "drawColor")
-	surface.SetTextColor(drawColor[1]*255, drawColor[2]*255,drawColor[3]*255)
+	surface.SetTextColor(af.brand.color)
 
 	local curY = 10
-	if config.get("hud", "drawBrand") then
+	if cfg.drawBrand then
 		surface.SetTextPos(10, curY)
 		surface.DrawText("Antifreeze - " .. af.info.version .. " - LJE")
 		curY = curY + 20
 	end
 
-	if config.get("hud", "drawMemory") then
+	if cfg.drawMemory then
 		surface.SetTextPos(10, curY)
-		surface.DrawText(string.format("GC Memory: %s MB", tostring(math.Round(lje.gc.get_total() / 1000 / 1000, 2))))
+		surface.DrawText(string.format("GC Memory: %s MB", tostring(math.ceil(lje.gc.get_total() / 1000 / 1000, 2))))
 		curY = curY + 20
 	end
 
-	if config.get("hud", "drawVelocity") then
+	if cfg.drawVelocity then
 		surface.SetTextPos(10, curY)
-		surface.DrawText(string.format("Velocity: %s u/s", tostring(math.Round(LocalPlayer():GetVelocity():Length()))))
+		surface.DrawText(string.format("Velocity: %s u/s", tostring(math.ceil(LocalPlayer():GetVelocity():Length()))))
 		curY = curY + 20
 	end
 
-	if config.get("hud", "drawScreengrabWarning") then
-		if af.modules.antiscreengrab.isScreengrabRecent() or af.debug then
+	if cfg.drawScreengrabWarning then
+		if af.debug then
 			local timeSince = af.modules.antiscreengrab.timeSinceScreengrab()
 			surface.SetTextPos(10, curY)
 			local c = timeSince <= 30 and (math.sin(SysTime() * 15) * 127 + 128) or 127
 			surface.SetTextColor(c, 255, 255, 255)
 			surface.DrawText(string.format("Screengrabbed %.1f seconds ago!", timeSince))
 			curY = curY + 20
+		end
+	end
+
+	if cfg.drawModules then
+		local i = 0
+		for name, data in pairs(af.modules) do
+			if name == "hud" then
+				continue
+			end
+			i = i + 1
+			if data.enabled then
+				y = 10 + i * 20 + curY
+				surface.SetTextPos(10, y)
+				surface.DrawText(data.moduleInfo.name)
+			end
 		end
 	end
 end

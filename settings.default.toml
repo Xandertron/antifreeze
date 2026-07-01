@@ -1,0 +1,15 @@
+[keybinds]
+aimbot = "X"
+
+[modules]
+aimbot = true
+esp = true
+
+[esp]
+models = true
+aimlines = true
+material = "models/shiny"
+
+[block]
+http = true
+openurl = false
