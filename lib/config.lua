@@ -67,12 +67,12 @@ proxyMeta.__newindex = function(proxy, key, newValue)
 	local entry = config.raw[configName][key]
 
 	if not entry then
-		af.log(string.format("config: unknown key '%s' for '%s'", key, configName), af.level.error)
+		af.log(string.format("config: unknown key '%s' for '%s'", key, configName), "error")
 		return
 	end
 
 	if entry.value ~= nil and type(entry.value) ~= type(newValue) then
-		af.log(string.format("config: type mismatch for '%s.%s'", configName, key), af.level.error)
+		af.log(string.format("config: type mismatch for '%s.%s', expected/got: %s / %s", configName, key, type(entry.value), type(newValue)), "error")
 		return
 	end
 

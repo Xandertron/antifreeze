@@ -8,7 +8,6 @@ bhop.moduleInfo = {
 
 function bhop:move(cmd)
 	local ply = LocalPlayer()
-	local cmd = lje.proxy.copy(cmd)
 
 	if not ply:Alive() or ply:GetMoveType() == MOVETYPE_NOCLIP then
 		return

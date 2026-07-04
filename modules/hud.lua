@@ -51,16 +51,21 @@ function hud:render()
 	end
 
 	if cfg.drawModules then
-		local i = 0
+		local anyEnabled = false
 		for name, data in pairs(af.modules) do
 			if name == "hud" then
 				continue
 			end
-			i = i + 1
 			if data.enabled then
-				y = 10 + i * 20 + curY
-				surface.SetTextPos(10, y)
+				if not anyEnabled then
+					anyEnabled = true
+					surface.SetDrawColor(255, 255, 255)
+					surface.DrawLine(10, curY+5, 150, curY+5)
+					curY = curY + 10
+				end
+				surface.SetTextPos(10, curY)
 				surface.DrawText(data.moduleInfo.name)
+				curY = curY + 20
 			end
 		end
 	end

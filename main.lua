@@ -25,7 +25,7 @@ noop = function() end
 
 af.config = lje.include("lib/config.lua")
 af.log = lje.include("lib/log.lua")
-lje.include("service/ui.lua")
+local drawOverlay = lje.include("service/ui.lua")
 
 local settings = lje.settings.open()
 local httpDetour
@@ -79,7 +79,58 @@ local function checkCapture()
 end
 
 af.modules = af.modules or {}
+af.moduleSections = af.moduleSections or {}
 local modulesToLoad = lje.env.find_script_files("modules/*")
+
+local cfg = af.config.register("main", {
+	enabledModules = { value = {
+		esp = true,
+		aimbot = false,
+		bhop = false,
+		freecam = false,
+	} },
+})
+
+lje.util.inspect(cfg.enabledModules)
+
+function af.switchModule(moduleName, switch, temp)
+	if not (moduleName and af.modules[moduleName]) then
+		print("[AF] That module doesnt exist!")
+		return nil
+	end
+
+	local moduleTable = af.modules[moduleName]
+	local state = moduleTable.enabled or false
+
+	-- toggle if switch is nil
+	if switch == nil then
+		switch = not state
+	end
+
+	-- no state change, nothing to do
+	if state == switch then
+		return switch
+	end
+
+	-- rising and falling edge
+	if not state and switch then
+		if moduleTable.onEnable then
+			moduleTable.onEnable()
+		end
+	elseif state and not switch then
+		if moduleTable.onDisable then
+			moduleTable.onDisable()
+		end
+	end
+
+	-- update runtime state
+	moduleTable.enabled = switch
+
+	-- persist state
+	cfg.enabledModules[moduleName] = switch
+	af.config.set("main", "enabledModules", cfg.enabledModules, temp)
+	return switch
+end
 
 af.log("Found " .. #modulesToLoad .. " module(s) to load!")
 
@@ -92,6 +143,17 @@ function af.loadModule(name, data)
 	data.enabled = true
 
 	af.modules[name] = data
+	af.modules[name].enabled = cfg.enabledModules[name]
+	af.modules[name].enabled = data.enabled or false --allow modules to override startup status
+
+	if data.moduleInfo then
+		local key = data.moduleInfo.section
+		if key ~= "none" then
+			key = key or "other" --handle non-defined sections
+			af.moduleSections[key] = af.moduleSections[key] or {}
+			af.moduleSections[key][name] = true
+		end
+	end
 end
 
 for idx, path in ipairs(modulesToLoad) do
@@ -108,8 +170,9 @@ end
 --
 hook.Add("CreateMove", "move", function(cmd)
 	for moduleName, moduleData in pairs(af.modules) do
-		if moduleData.move then
-			moduleData:move(cmd)
+		if moduleData.move and moduleData.enabled then
+			local ccmd = lje.proxy.copy(cmd)
+			moduleData:move(ccmd)
 		end
 	end
 end)
@@ -125,12 +188,14 @@ hook.Add("PostRender", "render", function()
 	end
 
 	for moduleName, moduleData in pairs(af.modules) do
-		if moduleData.run then
+		if moduleData.run and moduleData.enabled then
 			moduleData:run()
 		end
 	end
 
 	cam.Start2D()
+
+	drawOverlay()
 
 	if SysTime() - lastCaptureTime < 5 then
 		surface.SetTextColor(255, 255, 100, 255)
@@ -139,7 +204,7 @@ hook.Add("PostRender", "render", function()
 	end
 
 	for moduleName, moduleData in pairs(af.modules) do
-		if moduleData.render then
+		if moduleData.render and moduleData.enabled then
 			moduleData:render()
 		end
 	end
