@@ -38,11 +38,23 @@ function esp:getTeamInfo(ply)
 	return esp.teams[teamId]
 end
 
-local notseen = {}
+function esp:createPropESPMat()  --todo: unreliable
+	esp.propESPMat = CreateMaterial("prop_wh_mat", "UnlitGeneric", {
+		["$basetexture"] = "color/white",
+		["$model"] = 1,
+		["$ignorez"] = 1,
+		["$vertexcolor"] = 1,
+		["$vertexalpha"] = 1,
+	})
+end
 
 function esp:render()
 	if not self.teams then
 		self:fetchTeams()
+	end
+
+	if not self.propESPMat then
+		self:createPropESPMat()
 	end
 
 	if esp.currentMaterialPath ~= cfg.material then
@@ -74,13 +86,18 @@ function esp:render()
 			local r = LocalPlayer():GetPos():Distance(ply:GetPos()) / 2000
 			render.SetColorModulation(0.5, 1, 1)
 			render.SetBlend(cfg.transparency)
-			
-			local prop = ply:GetNWEntity("PlayerPropEntity", nil)
-			if prop ~= nil and prop:IsValid() then
-				prop:DrawModel()
-			end
 
-			if cfg.drawModels then
+			if cfg.drawPropHuntX then
+				local prop = ply:GetNWEntity("PlayerPropEntity", nil)
+				if prop ~= nil and prop:IsValid() then
+					prop:SetMaterial(esp.currentMaterialPath)
+					prop:SetColor(af.brand.color)
+				else
+					if cfg.drawModels then
+						ply:DrawModel()
+					end
+				end
+			elseif cfg.drawModels then
 				ply:DrawModel()
 			end
 
@@ -118,6 +135,7 @@ end
 function esp:cleanup()
 	esp.currentMaterial = nil
 	esp.currentMaterialPath = nil
+	esp.propESPMat = nil
 	esp.teams = nil
 end
 
