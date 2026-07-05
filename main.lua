@@ -1,7 +1,7 @@
 af = af or {}
 
 af.info = {}
-af.info.version = "2.0.0"
+af.info.version = "2.1.0"
 af.info.name = "Antifreeze"
 
 local print = lje.con_printf
@@ -85,9 +85,7 @@ local modulesToLoad = lje.env.find_script_files("modules/*")
 local cfg = af.config.register("main", {
 	enabledModules = { value = {
 		esp = true,
-		aimbot = false,
-		bhop = false,
-		freecam = false,
+		hud = true,
 	} },
 })
 
@@ -194,6 +192,12 @@ hook.Add("PostRender", "render", function()
 	end
 
 	cam.Start2D()
+
+	for moduleName, moduleData in pairs(af.modules) do
+		if moduleData.prerender and moduleData.enabled then
+			moduleData:prerender()
+		end
+	end
 
 	drawOverlay()
 

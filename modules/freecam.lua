@@ -110,12 +110,9 @@ local FreecamRT = GetRenderTarget("freecam_rt", ScrW(), ScrH())
 
 local freecamMat = CreateMaterial("freecam_rt_material", "UnlitGeneric", {
     ["$basetexture"] = "freecam_rt",
-    ["$vertexcolor"] = 1,
-    ["$vertexalpha"] = 1,
-    ["$ignorez"] = 1,
 })
 
-function freecam:render()
+function freecam:prerender()
 	render.PushRenderTarget(FreecamRT)
 	render.Clear(0, 0, 0, 255, true, true)
 	render.SetViewPort(0, 0, ScrW(), ScrH())
@@ -123,13 +120,12 @@ function freecam:render()
 		origin = freecam.lerpTargetPosition,
 		angles = freecam.currentAngles,
 		fov = cfg.fov,
-		drawviewmodel = false,
-        drawhud = true,
         drawviewer = true,
 		w = w,
 		h = h,
 	})
 	render.PopRenderTarget()
+    
     surface.SetMaterial(freecamMat)
     surface.SetDrawColor(255, 255, 255, 255)
     surface.DrawTexturedRect(0, 0, ScrW(), ScrH())
