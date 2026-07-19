@@ -55,6 +55,26 @@ local function loadFromDisk(configName)
 	return liveData
 end
 
+-- If a module has registered itself in af.modules under the same name as
+-- its config, and exposes an onConfigChange(key, value) function (either
+-- directly or under moduleInfo), call it whenever one of its keys changes.
+-- Wrapped in pcall so a broken callback in one module can't take down the
+-- config system or the UI frame that triggered it.
+local function notifyModule(configName, key, newValue)
+	local moduleTable = af.modules and af.modules[configName]
+	if not moduleTable then return end
+ 
+	local callback = moduleTable.onConfigChange
+		or (moduleTable.moduleInfo and moduleTable.moduleInfo.onConfigChange)
+ 
+	if type(callback) == "function" then
+		local ok, err = pcall(callback, moduleTable, key, newValue)
+		if not ok then
+			af.log(string.format("config: onConfigChange failed for '%s.%s': %s", configName, key, err), af.level.error)
+		end
+	end
+end
+
 local proxyMeta = {}
 
 proxyMeta.__index = function(proxy, key)
@@ -67,12 +87,12 @@ proxyMeta.__newindex = function(proxy, key, newValue)
 	local entry = config.raw[configName][key]
 
 	if not entry then
-		af.log(string.format("config: unknown key '%s' for '%s'", key, configName), "error")
+		af.log(string.format("config: unknown key '%s' for '%s'", key, configName), af.level.error)
 		return
 	end
 
 	if entry.value ~= nil and type(entry.value) ~= type(newValue) then
-		af.log(string.format("config: type mismatch for '%s.%s', expected/got: %s / %s", configName, key, type(entry.value), type(newValue)), "error")
+		af.log(string.format("config: type mismatch for '%s.%s'", configName, key), af.level.error)
 		return
 	end
 
@@ -81,8 +101,13 @@ proxyMeta.__newindex = function(proxy, key, newValue)
 		if entry.min and newValue < entry.min then newValue = entry.min end
 	end
 
+	local oldValue = entry.value
 	entry.value = newValue
 	dirty[configName] = true
+
+	if oldValue ~= newValue then
+		notifyModule(configName, key, newValue)
+	end
 
 	if not rawget(proxy, "__deferSave") then
 		persist(configName)
@@ -151,7 +176,7 @@ function config.saveAll()
 	if anySaved then af.log("Saving all configurations") end
 end
 
-function config.getTable()
+function config.getRawTable()
 	return config.raw
 end
 

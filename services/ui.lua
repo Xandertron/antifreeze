@@ -3,12 +3,12 @@ imgui.set_default_font(font)
 
 local lucida = imgui.load_font("C:/Windows/Fonts/lucon.ttf")
 
-local themesToLoad = lje.env.find_script_files("service/themes/*")
+local themesToLoad = lje.env.find_script_files("services/themes/*")
 af.themes = {}
 af.themeList = {}
 
 for idx, path in ipairs(themesToLoad) do
-	local themeName = string.match(path, "^service/themes/([^/]+)%.lua$")
+	local themeName = string.match(path, "^services/themes/([^/]+)%.lua$")
 	af.log("Loading theme: " .. themeName)
 	af.themes[themeName] = lje.include(path)
 	table.insert(af.themeList, themeName)

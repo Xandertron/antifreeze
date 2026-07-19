@@ -1,4 +1,4 @@
-local freecam =  {}
+local freecam = {}
 
 freecam.moduleInfo = {
 	name = "Freecam",
@@ -8,7 +8,9 @@ freecam.moduleInfo = {
 
 local cfg = af.config.register("freecam", {
 	camSpeed = { value = 500, min = 0, max = 2000 },
-    fov = { value = 75, min = 1, max = 360}
+	fov = { value = 75, min = 1, max = 360 },
+	redrawEntities = { value = false },
+	redrawDistance = { value = 4096, min = 1, max = 30000 },
 })
 
 freecam.currentPosition = Vector()
@@ -19,10 +21,6 @@ freecam.lastScroll = 0
 
 local function lerp(a, b, t)
 	return a + (b - a) * t
-end
-
-local function clamp( _in, low, high )
-	return math.min( math.max( _in, low ), high )
 end
 
 function freecam:onEnable()
@@ -98,7 +96,7 @@ hook.Add("InputMouseApply", "antifreeze.freecam.freeze", function(cmd, x, y, ang
 		cmd:SetMouseX(0)
 		cmd:SetMouseY(0)
 
-		freecam.currentAngles[1] = clamp(freecam.currentAngles[1] + y / 50, -89, 89)
+		freecam.currentAngles[1] = math.clamp(freecam.currentAngles[1] + y / 50, -89, 89)
 		freecam.currentAngles[2] = freecam.currentAngles[2] - x / 50
 	end
 end)
@@ -106,29 +104,57 @@ end)
 local w = ScrW()
 local h = ScrH()
 
-local FreecamRT = GetRenderTarget("freecam_rt", ScrW(), ScrH())
+local function randomString(length)
+    length = length or 32
+    local chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+    local result = {}
+    for i = 1, length do
+        local idx = math.random(1, #chars)
+        result[i] = chars:sub(idx, idx)
+    end
+    return table.concat(result)
+end
 
-local freecamMat = CreateMaterial("freecam_rt_material", "UnlitGeneric", {
-    ["$basetexture"] = "freecam_rt",
+math.randomseed(os.time())
+local freecamRTIndex = randomString(24)
+local freecamMatIndex = randomString(24)
+
+local freecamRT = GetRenderTarget(freecamRTIndex, ScrW(), ScrH())
+local freecamMat = CreateMaterial(freecamMatIndex, "UnlitGeneric", {
+	["$basetexture"] = freecamRTIndex,
 })
 
 function freecam:prerender()
-	render.PushRenderTarget(FreecamRT)
+	render.PushRenderTarget(freecamRT)
 	render.Clear(0, 0, 0, 255, true, true)
 	render.SetViewPort(0, 0, ScrW(), ScrH())
 	render.RenderView({
 		origin = freecam.lerpTargetPosition,
 		angles = freecam.currentAngles,
 		fov = cfg.fov,
-        drawviewer = true,
+		drawviewer = true,
 		w = w,
 		h = h,
 	})
 	render.PopRenderTarget()
+
+	if cfg.redrawEntities then
+		render.SetBlend(1)
+		render.SetColorModulation(1, 1, 1)
+
+		for _, ent in ipairs(ents.GetAll()) do
+			if ent:IsValid() then
+				local dist = ent:GetPos():DistToSqr(freecam.lerpTargetPosition)
+				if dist < cfg.redrawDistance ^ 2 then
+					ent:DrawModel()
+				end
+			end
+		end
+	end
     
-    surface.SetMaterial(freecamMat)
-    surface.SetDrawColor(255, 255, 255, 255)
-    surface.DrawTexturedRect(0, 0, ScrW(), ScrH())
+	surface.SetMaterial(freecamMat)
+	surface.SetDrawColor(255, 255, 255, 255)
+	surface.DrawTexturedRect(0, 0, ScrW(), ScrH())
 end
 
 return freecam

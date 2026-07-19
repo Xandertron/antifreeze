@@ -21,11 +21,10 @@ af.brand.watermark = [[
 ]]
 af.brand.color = Color(127, 255, 255)
 
-noop = function() end
-
 af.config = lje.include("lib/config.lua")
 af.log = lje.include("lib/log.lua")
-local drawOverlay = lje.include("service/ui.lua")
+--lje.include("services/concommand.lua") --awaiting engine hook suppression
+local drawOverlay = lje.include("services/ui.lua")
 
 local settings = lje.settings.open()
 local httpDetour
@@ -78,6 +77,10 @@ local function checkCapture()
 	end
 end
 
+function math.clamp(_in, low, high)
+	return math.min(math.max(_in, low), high)
+end
+
 af.modules = af.modules or {}
 af.moduleSections = af.moduleSections or {}
 local modulesToLoad = lje.env.find_script_files("modules/*")
@@ -88,8 +91,6 @@ local cfg = af.config.register("main", {
 		hud = true,
 	} },
 })
-
-lje.util.inspect(cfg.enabledModules)
 
 function af.switchModule(moduleName, switch, temp)
 	if not (moduleName and af.modules[moduleName]) then
@@ -176,7 +177,7 @@ hook.Add("CreateMove", "move", function(cmd)
 end)
 
 hook.Add("PostRender", "render", function()
-	if render.IsTakingScreenshot() then
+	if render.IsTakingScreenshot() or gui.IsGameUIVisible() then
 		return
 	end
 
