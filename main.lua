@@ -1,5 +1,7 @@
 af = af or {}
 
+af.debug = false
+
 af.info = {}
 af.info.version = "2.1.0"
 af.info.name = "Antifreeze"
@@ -36,45 +38,6 @@ end
 
 if settings:get("block.openurl", true) then
 	openUrlDetour = lje.include("detours/openurl.lua")
-end
-
-local function getFnAddr(fn)
-	return ffi.mem.unwrap_userdata(ffi.mem.upvalue(fn, 1))
-end
-
-local renderCapture = getFnAddr(render.Capture)
-
--- TODO: fix this and put it in a detour module
-if renderCaptureDetour then
-	renderCaptureDetour:remove()
-	renderCaptureDetour = nil
-end
-
-renderCaptureDetour, err = ffi.detour.create(
-	renderCapture,
-	[[
-#include <stdio.h>
-int (*original)(lua_State* L);
-int captureCounter = 0;
-
-int detour(lua_State* L) {
-  captureCounter++;
-  return original(L);
-}
-]]
-)
-
-local captureCounterPtr = renderCaptureDetour:get("captureCounter")
-ffi.mem.try_write_u32(captureCounterPtr, 0) -- Initialize counter to 0
-
-local lastCaptureCount = 0
-local lastCaptureTime = 0
-local function checkCapture()
-	local currentCount = ffi.mem.try_read_u32(captureCounterPtr)
-	if currentCount ~= nil and currentCount > lastCaptureCount then
-		lastCaptureCount = currentCount
-		lastCaptureTime = SysTime()
-	end
 end
 
 function math.clamp(_in, low, high)
@@ -151,6 +114,11 @@ function af.loadModule(name, data)
 			key = key or "other" --handle non-defined sections
 			af.moduleSections[key] = af.moduleSections[key] or {}
 			af.moduleSections[key][name] = true
+		else
+			-- section "none" modules have no menu checkbox to control them
+			-- (e.g. antiscreengrab), so they must always run regardless of
+			-- any persisted enabled state
+			af.modules[name].enabled = true
 		end
 	end
 end
@@ -181,7 +149,6 @@ hook.Add("PostRender", "render", function()
 		return
 	end
 
-	checkCapture()
 	if httpDetour then
 		httpDetour:run()
 	end
@@ -202,12 +169,6 @@ hook.Add("PostRender", "render", function()
 
 	drawOverlay()
 
-	if SysTime() - lastCaptureTime < 5 then
-		surface.SetTextColor(255, 255, 100, 255)
-		surface.SetTextPos(10, 20)
-		surface.DrawText("Screengrab detected!")
-	end
-
 	for moduleName, moduleData in pairs(af.modules) do
 		if moduleData.render and moduleData.enabled then
 			moduleData:render()
@@ -220,11 +181,6 @@ end)
 hook.Listen(true)
 
 lje.env.on_cleanup(function()
-	if renderCaptureDetour then
-		renderCaptureDetour:disable()
-		renderCaptureDetour = nil
-	end
-
 	if httpDetour then
 		httpDetour:cleanup()
 	end
