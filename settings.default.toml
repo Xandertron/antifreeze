@@ -12,4 +12,7 @@ material = "models/shiny"
 
 [block]
 http = true
-openurl = false
+openurl = true
+
+[log]
+net = true

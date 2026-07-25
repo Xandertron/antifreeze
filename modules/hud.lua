@@ -66,7 +66,7 @@ function hud:render()
 		local anyEnabled = false
 
 		for name, data in pairs(af.modules) do
-			if name == "hud" then
+			if data.moduleInfo.section == "none" or name == "hud" then
 				continue
 			end
 			if data.enabled then

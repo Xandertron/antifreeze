@@ -7,7 +7,7 @@ local level = {
 
 local function log(msg, lvl)
 	if lvl == level.debug and not af.debug then return end
-	lje.con_printf(string.format("[AF] %s %s", level[lvl] or level.info, msg))
+	lje.con_printf(string.format("[$cyan{AF}] %s %s", level[lvl] or level.info, msg))
 end
 
 return log, level

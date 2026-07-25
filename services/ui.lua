@@ -154,74 +154,108 @@ local function renderOverlay()
 			imgui.end_tab_item()
 		end
 
-		--net tab, net logger is not implemented cause of the upgrade to lje v2, unused
+		--net tab, only meaningful once detours/net.lua has actually loaded
+		--(settings: log.net, off by default)
 
-		--[[if imgui.begin_tab_item("net") then
-			imgui.begin_child("log", 0, -58, imgui.ChildFlags_AutoResizeY)
+		if imgui.begin_tab_item("net") then
+			if af.nog then
+				imgui.begin_child("log", 0, -58, imgui.ChildFlags_AutoResizeY)
 
-			imgui.push_font(lucida)
+				imgui.push_font(lucida)
 
-			for _, line in ipairs(af.nog.logs) do
-				if (string.find(line.name, netFilter) == nil) ~= netFilterInvert then continue end
-				imgui.separator()
-				if line.direction == "send" then
-					imgui.text_colored(1, 0.945, 0.482, 1, "▲")
-				else
-					imgui.text_colored(0.592, 0.827, 1, 1, "▼")
-				end
-				imgui.same_line()
-				imgui.text_colored(accentR, accentG, accentB, 1, line.name)
-				if imgui.is_item_hovered() then
-					imgui.set_tooltip(line.time)
-				end
-				for _, field in ipairs(line.fields) do
-					imgui.text_colored(accentR * 0.7, accentG * 0.7, accentB * 0.7, 1, "    " .. field.fn)
+				for _, line in ipairs(af.nog.logs) do
+					-- netFilter is a real Lua pattern (kept on purpose), so an
+					-- in-progress pattern (unbalanced "(", stray "%", etc.) is
+					-- expected while typing - pcall so that doesn't error every
+					-- frame. An invalid pattern is treated as "no match".
+					local ok, found = pcall(string.find, line.name, netFilter)
+					local notFound = (not ok) or (found == nil)
+					if notFound ~= netFilterInvert then continue end
+					imgui.separator()
+					if line.direction == "send" then
+						imgui.text_colored(1, 0.945, 0.482, 1, "▲")
+					else
+						imgui.text_colored(0.592, 0.827, 1, 1, "▼")
+					end
 					imgui.same_line()
-					imgui.text(tostring(field.value))
+					imgui.text_colored(accentR, accentG, accentB, 1, line.name)
+					if imgui.is_item_hovered() then
+						imgui.set_tooltip(line.time)
+					end
+					for _, field in ipairs(line.fields) do
+						imgui.text_colored(accentR * 0.7, accentG * 0.7, accentB * 0.7, 1, "    " .. field.fn)
+
+						local value = tostring(field.value)
+						if string.find(value, "\n", 1, true) then
+							-- multi-line hex dump (binary field value) - its own
+							-- indented block below the name, not jammed onto the
+							-- same line
+							imgui.indent(28)
+							imgui.text(value)
+							imgui.unindent(28)
+						else
+							imgui.same_line()
+							imgui.text(value)
+						end
+					end
 				end
-			end
 
-			imgui.pop_font()
+				imgui.pop_font()
 
-			if netAutoScroll then
-				imgui.set_scroll_here_y(1.0) -- scroll to bottom
-			end
+				if netAutoScroll then
+					imgui.set_scroll_here_y(1.0) -- scroll to bottom
+				end
 
-			imgui.end_child()
+				imgui.end_child()
 
-			imgui.set_next_item_width(200)
-			local changed, text = imgui.input_text("Filter", netFilter)
-			netFilter = text
+				imgui.set_next_item_width(200)
+				local changed, text = imgui.input_text("Filter", netFilter)
+				netFilter = text
+				if imgui.is_item_hovered() then
+					imgui.set_tooltip(
+						"Matches against the message name. This is a real Lua pattern, not a plain substring search:\n"
+							.. "^text   starts with \"text\"\n"
+							.. "text$   ends with \"text\"\n"
+							.. "%d+   one or more digits\n"
+							.. "%a+   one or more letters\n"
+							.. "%w+   one or more letters/digits\n"
+							.. ".      matches any single character\n"
+							.. "%%      literal percent sign (patterns treat % specially)\n"
+							.. "Combine with \"Invert\" to show everything that does NOT match instead."
+					)
+				end
 
-			imgui.same_line()
+				imgui.same_line()
 
-			local _, checked = imgui.checkbox("Invert", netFilterInvert)
-			netFilterInvert = checked
+				local _, checked = imgui.checkbox("Invert", netFilterInvert)
+				netFilterInvert = checked
 
-			--next line
+				--next line
 
-			local _, checked = imgui.checkbox("Auto Scroll", netAutoScroll)
-			netAutoScroll = checked
+				local _, checked = imgui.checkbox("Auto Scroll", netAutoScroll)
+				netAutoScroll = checked
 
-			imgui.same_line()
+				imgui.same_line()
 
-			imgui.set_next_item_width(120)
-			local changed, maxEntries = imgui.input_int("Max Entries", af.nog.maxEntries)
-			if changed then
-				af.nog.maxEntries = maxEntries
-				af.nog.trimEntries()
-			end
+				imgui.set_next_item_width(120)
+				local changed, maxEntries = imgui.input_int("Max Entries", af.nog.maxEntries)
+				if changed then
+					af.nog.maxEntries = maxEntries
+					af.nog.trimEntries()
+				end
 
-			imgui.same_line()
+				imgui.same_line()
 
-			if imgui.button("Clear Log") then
-				af.nog.clear()
+				if imgui.button("Clear Log") then
+					af.nog.clear()
+				end
+			else
+				imgui.text_colored(1, 0.6, 0.6, 1, "Net logging is disabled.")
+				imgui.text("Enable the \"net\" key under [log] in settings.default.toml (or your user settings override) and reload.")
 			end
 
 			imgui.end_tab_item()
-		end]]--
-        
-        --
+		end
 
 		imgui.end_tab_bar()
 	end

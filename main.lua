@@ -3,7 +3,7 @@ af = af or {}
 af.debug = false
 
 af.info = {}
-af.info.version = "2.1.0"
+af.info.version = lje.script.info().version or "unknown"
 af.info.name = "Antifreeze"
 
 local print = lje.con_printf
@@ -31,6 +31,7 @@ local drawOverlay = lje.include("services/ui.lua")
 local settings = lje.settings.open()
 local httpDetour
 local openUrlDetour
+local netDetour
 
 if settings:get("block.http", true) then
 	httpDetour = lje.include("detours/http.lua")
@@ -38,6 +39,10 @@ end
 
 if settings:get("block.openurl", true) then
 	openUrlDetour = lje.include("detours/openurl.lua")
+end
+
+if settings:get("log.net", false) then
+	netDetour = lje.include("detours/net.lua")
 end
 
 function math.clamp(_in, low, high)
@@ -144,19 +149,29 @@ hook.Add("CreateMove", "move", function(cmd)
 	end
 end)
 
-hook.Add("PostRender", "render", function()
-	if render.IsTakingScreenshot() or gui.IsGameUIVisible() then
-		return
-	end
-
+hook.Add("Think", "poll", function()
 	if httpDetour then
 		httpDetour:run()
+	end
+
+	if openUrlDetour then
+		openUrlDetour:run()
+	end
+
+	if netDetour then
+		netDetour:run()
 	end
 
 	for moduleName, moduleData in pairs(af.modules) do
 		if moduleData.run and moduleData.enabled then
 			moduleData:run()
 		end
+	end
+end)
+
+hook.Add("PostRender", "render", function()
+	if render.IsTakingScreenshot() or gui.IsGameUIVisible() then
+		return
 	end
 
 	cam.Start2D()
@@ -187,6 +202,10 @@ lje.env.on_cleanup(function()
 
 	if openUrlDetour then
 		openUrlDetour:cleanup()
+	end
+
+	if netDetour then
+		netDetour:cleanup()
 	end
 
 	for moduleName, moduleData in pairs(af.modules) do

@@ -79,9 +79,10 @@ function example:move(cmd)
 	-- e.g. cmd:SetButtons(bit.band(cmd:GetButtons(), bit.bnot(IN_JUMP)))
 end
 
--- Optional: fires first in the PostRender hook, before any drawing
--- happens (cam.Start2D hasn't run yet). Use this for per-frame logic
--- that isn't drawing, the way holdundo.lua and spam.lua do.
+-- Optional: fires from the Think hook, once per game tick, independent of
+-- rendering entirely (no cam.Start2D, doesn't pause when the console/a menu
+-- is open like PostRender does). Use this for per-frame logic that isn't
+-- drawing, the way holdundo.lua and spam.lua do - never draw here.
 function example:run()
 	-- e.g. poll input, advance timers, run console commands
 end
