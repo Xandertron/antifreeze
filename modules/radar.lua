@@ -18,7 +18,7 @@ local cfg = af.config.register("radar", {
 	showHeight = { value = true },
 	sweep = { value = true },
 	rotate = { value = false },
-})
+}, { "range", "size", "corner", "showNames", "showHeight", "sweep", "rotate" })
 
 local MARGIN = 24
 local SEGMENTS = 48 -- perimeter smoothness for the circular panel

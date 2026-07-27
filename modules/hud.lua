@@ -14,7 +14,7 @@ local cfg = af.config.register("hud", {
 	drawScreengrabWarning = { value = true },
 
 	drawColor = { value = { 0.5, 1, 1 }, type = "color" },
-})
+}, { "drawBrand", "drawMemory", "drawVelocity", "drawModules", "drawScreengrabWarning", "drawColor" })
 
 local function calculateSizeAndDraw(text)
 	surface.DrawText(text)

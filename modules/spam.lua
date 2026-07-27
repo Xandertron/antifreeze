@@ -11,7 +11,7 @@ local cfg = af.config.register("spam", {
 	mouse = { value = false },
 	use = { value = false },
 	cooldown = { value = 0.15, min = 0.01, max = 1 },
-})
+}, { "flashlight", "mouse", "use", "cooldown" })
 
 local cooldownTime = 0
 

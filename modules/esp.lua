@@ -12,7 +12,7 @@ local cfg = af.config.register("esp", {
 	drawModels = { value = true },
 	drawAimLines = { value = true },
 	drawPropHuntX = { value = true },
-})
+}, { "material", "transparency", "drawModels", "drawAimLines", "drawPropHuntX" })
 
 esp.currentMaterialPath = cfg.material
 esp.currentMaterial = Material(cfg.material)

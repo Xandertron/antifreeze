@@ -2,6 +2,7 @@ local config = config or {}
 config.defaults = config.defaults or {} -- configName -> { key = {value=.., min=.., max=..}, ... }
 config.raw      = config.raw or {}      -- configName -> live table, same shape as defaults
 config.proxies  = config.proxies or {}  -- configName -> ergonomic proxy table
+config.order    = config.order or {}    -- configName -> { key1, key2, ... } display order (optional)
 
 local namespace = "antifreeze"
 local dirty = {}
@@ -129,8 +130,20 @@ end
 --   if cfg.strafingEnabled then ... end
 --   cfg.strafeTurnSpeed = 5   -- clamped, type-checked, auto-saved
 --
-function config.register(configName, defaults)
+-- Optional third argument: an array of key names giving the order the menu
+-- should display them in (services/ui.lua can't infer this - a Lua table's
+-- pairs() order isn't tied to how you wrote it, and gets less predictable
+-- as the table grows). Omit it and the menu falls back to alphabetical,
+-- which is at least stable, just not necessarily the order you'd pick.
+--
+--   local cfg = af.config.register("bhop", {
+--       strafingEnabled = { value = false },
+--       strafeTurnSpeed = { value = 1, min = 0, max = 10 },
+--   }, { "strafingEnabled", "strafeTurnSpeed" })
+--
+function config.register(configName, defaults, order)
 	config.defaults[configName] = defaults
+	config.order[configName] = order
 	loadFromDisk(configName)
 
 	local proxy = setmetatable({ __name = configName }, proxyMeta)

@@ -9,7 +9,7 @@ vision.moduleInfo = {
 local cfg = af.config.register("vision", {
 	wraithVision = { value = false },
 	wraithTransparency = { value = 0.75, min = 0, max = 1 },
-})
+}, { "wraithVision", "wraithTransparency" })
 
 function vision:onConfigChange(key, value)
 	if key == "wraithVision" or key == "wraithTransparency" then

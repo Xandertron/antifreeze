@@ -11,7 +11,7 @@ local cfg = af.config.register("freecam", {
 	fov = { value = 75, min = 1, max = 360 },
 	redrawEntities = { value = false },
 	redrawDistance = { value = 4096, min = 1, max = 30000 },
-})
+}, { "camSpeed", "fov", "redrawEntities", "redrawDistance" })
 
 freecam.currentPosition = Vector()
 freecam.currentAngles = Angle()

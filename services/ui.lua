@@ -18,7 +18,7 @@ local config = af.config
 local uiConfig = config.register("ui", {
 	theme = { value = "sleek" },
 	accentColor = { value = { 0.5, 1, 1 } },
-})
+}, { "theme", "accentColor" })
 
 local accentR, accentG, accentB = unpack(uiConfig.accentColor)
 
@@ -34,6 +34,9 @@ end
 local netAutoScroll = false
 local netFilter = ""
 local netFilterInvert = false
+
+local consoleInput = ""
+local consoleLastLen = 0
 
 local function renderOverlay()
 	if imgui.begin_tab_bar("Categories") then
@@ -58,7 +61,27 @@ local function renderOverlay()
 							end
 
 							if open then
-								for optionName, optionData in pairs(af.config.raw[moduleName]) do
+
+								local optionNames = {}
+								for optionName in pairs(af.config.raw[moduleName]) do
+									optionNames[#optionNames + 1] = optionName
+								end
+
+								local rank = {}
+								for i, name in ipairs(af.config.order[moduleName] or {}) do
+									rank[name] = i
+								end
+
+								table.sort(optionNames, function(a, b)
+									local ra, rb = rank[a] or math.huge, rank[b] or math.huge
+									if ra ~= rb then
+										return ra < rb
+									end
+									return a < b
+								end)
+
+								for _, optionName in ipairs(optionNames) do
+									local optionData = af.config.raw[moduleName][optionName]
 									imgui.indent(28)
 									if type(optionData.value) == "boolean" then
 										local changed, value = imgui.checkbox(optionName, optionData.value)
@@ -147,15 +170,61 @@ local function renderOverlay()
 				accentR, accentG, accentB = r, g, b
 			end
 
-			--if imgui.collapsing_header("Settings") then
-			--	  imgui.text("Settings content here")
-			--end
-
 			imgui.end_tab_item()
 		end
 
-		--net tab, only meaningful once detours/net.lua has actually loaded
-		--(settings: log.net, off by default)
+		if imgui.begin_tab_item("console") then
+			imgui.begin_child("consoleLog", 0, -40, imgui.ChildFlags_AutoResizeY)
+			imgui.push_font(lucida)
+
+			for _, entry in ipairs(af.commands.log) do
+				if entry.isError then
+					imgui.text_colored(1, 0.4, 0.4, 1, entry.text)
+				else
+					imgui.text(entry.text)
+				end
+			end
+
+			-- only pin to the bottom when new output actually arrived, so
+			-- scrolling up to read history doesn't get yanked back down
+			if #af.commands.log ~= consoleLastLen then
+				consoleLastLen = #af.commands.log
+				imgui.set_scroll_here_y(1.0)
+			end
+
+			imgui.pop_font()
+			imgui.end_child()
+
+			local changed, text = imgui.input_text_multiline(
+				"##consoleInput",
+				consoleInput,
+				4096, -105, 26,
+				bit.bor(imgui.InputTextFlags_EnterReturnsTrue, imgui.InputTextFlags_CtrlEnterForNewLine)
+			)
+			consoleInput = text
+
+			if changed then
+				af.commands.run(consoleInput)
+				consoleInput = ""
+				imgui.set_keyboard_focus_here(-1)
+			end
+
+			imgui.same_line()
+
+			if imgui.button("Run") then
+				af.commands.run(consoleInput)
+				consoleInput = ""
+				imgui.set_keyboard_focus_here(-2)
+			end
+
+			imgui.same_line()
+
+			if imgui.button("Clear") then
+				af.commands.clear()
+			end
+
+			imgui.end_tab_item()
+		end
 
 		if imgui.begin_tab_item("net") then
 			if af.nog then
@@ -164,10 +233,6 @@ local function renderOverlay()
 				imgui.push_font(lucida)
 
 				for _, line in ipairs(af.nog.logs) do
-					-- netFilter is a real Lua pattern (kept on purpose), so an
-					-- in-progress pattern (unbalanced "(", stray "%", etc.) is
-					-- expected while typing - pcall so that doesn't error every
-					-- frame. An invalid pattern is treated as "no match".
 					local ok, found = pcall(string.find, line.name, netFilter)
 					local notFound = (not ok) or (found == nil)
 					if notFound ~= netFilterInvert then continue end
@@ -187,9 +252,6 @@ local function renderOverlay()
 
 						local value = tostring(field.value)
 						if string.find(value, "\n", 1, true) then
-							-- multi-line hex dump (binary field value) - its own
-							-- indented block below the name, not jammed onto the
-							-- same line
 							imgui.indent(28)
 							imgui.text(value)
 							imgui.unindent(28)

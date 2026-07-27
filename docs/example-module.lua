@@ -45,6 +45,13 @@ local cfg = af.config.register("example", {
 
 	-- { value = <string> }                                -> text input
 	label = { value = "hello" },
+}, {
+	-- Optional third argument: display order. A Lua table's pairs() order
+	-- isn't tied to how you wrote it and gets less predictable as the
+	-- table grows, so list your keys here in the order you want them
+	-- shown. Omit this and the menu falls back to alphabetical - stable,
+	-- just not necessarily the order you'd pick.
+	"enableThing", "speed", "tint", "mode", "label",
 })
 
 -- Optional: called automatically by lib/config.lua's notifyModule()

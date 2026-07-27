@@ -25,7 +25,8 @@ af.brand.color = Color(127, 255, 255)
 
 af.config = lje.include("lib/config.lua")
 af.log = lje.include("lib/log.lua")
---lje.include("services/concommand.lua") --awaiting engine hook suppression
+af.commands = lje.include("lib/commands.lua")
+af.keybinds = lje.include("lib/keybinds.lua")
 local drawOverlay = lje.include("services/ui.lua")
 
 local settings = lje.settings.open()
@@ -140,7 +141,7 @@ for idx, path in ipairs(modulesToLoad) do
 end
 
 --
-hook.Add("CreateMove", "move", function(cmd)
+hook.Add("CreateMove", "antifreeze.move", function(cmd)
 	for moduleName, moduleData in pairs(af.modules) do
 		if moduleData.move and moduleData.enabled then
 			local ccmd = lje.proxy.copy(cmd)
@@ -149,7 +150,7 @@ hook.Add("CreateMove", "move", function(cmd)
 	end
 end)
 
-hook.Add("Think", "poll", function()
+hook.Add("Think", "antifreeze.run", function()
 	if httpDetour then
 		httpDetour:run()
 	end
@@ -169,7 +170,7 @@ hook.Add("Think", "poll", function()
 	end
 end)
 
-hook.Add("PostRender", "render", function()
+hook.Add("PostRender", "antifreeze.render", function()
 	if render.IsTakingScreenshot() or gui.IsGameUIVisible() then
 		return
 	end
