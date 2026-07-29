@@ -9,7 +9,7 @@ triggerbot.moduleInfo = {
 local cfg = af.config.register("triggerbot", {
 	minDelay = { value = 0.05, min = 0, max = 1 },
 	maxDelay = { value = 0.18, min = 0, max = 1 },
-}, { "requireKey", "minDelay", "maxDelay" })
+}, { "minDelay", "maxDelay" })
 
 triggerbot.key = _G["KEY_" .. lje.settings.get("keybinds.triggerbot", "C")]
 

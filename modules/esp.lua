@@ -12,7 +12,8 @@ local cfg = af.config.register("esp", {
 	drawModels = { value = true },
 	drawAimLines = { value = true },
 	drawPropHuntX = { value = true },
-}, { "material", "transparency", "drawModels", "drawAimLines", "drawPropHuntX" })
+	drawDead = { value = true },
+}, { "material", "transparency", "drawModels", "drawAimLines", "drawPropHuntX", "drawDead" })
 
 esp.currentMaterialPath = cfg.material
 esp.currentMaterial = Material(cfg.material)
@@ -67,6 +68,11 @@ function esp:render()
 			continue
 		end
 
+		local alive = ply:Alive()
+		if not alive and not cfg.drawDead then
+			continue
+		end
+
 		cam.Start({ type = "3D" })
 
 		local hitboxBoneId = ply:GetHitBoxBone(0, 0)
@@ -77,7 +83,7 @@ function esp:render()
 
 		local screenPos = plyPos:ToScreen() or { x = 0, y = 0 }
 
-		if ply:Alive() then
+		if alive then
 			--draw body
 			render.SuppressEngineLighting(true)
 			render.MaterialOverride(esp.currentMaterial)
@@ -113,11 +119,20 @@ function esp:render()
 				render.DrawLine(eyePos, eyePos + endPos, RED)
 			end
 		end
+
 		cam.End()
 
 		--draw info text
 		surface.SetDrawColor(255, 0, 255, 255)
-		surface.DrawOutlinedRect(screenPos.x - 5, screenPos.y - 5, 10, 10)
+		if alive then
+			surface.DrawOutlinedRect(screenPos.x - 5, screenPos.y - 5, 10, 10)
+		else
+			-- X mark instead of a square outline, so dead players read
+			-- differently from live ones at a glance
+			surface.DrawLine(screenPos.x - 5, screenPos.y - 5, screenPos.x + 5, screenPos.y + 5)
+			surface.DrawLine(screenPos.x - 5, screenPos.y + 5, screenPos.x + 5, screenPos.y - 5)
+		end
+
 		surface.SetTextColor(255, 255, 255, 255)
 		surface.SetFont("BudgetLabel")
 		surface.SetTextPos(screenPos.x + 10, screenPos.y - 5)

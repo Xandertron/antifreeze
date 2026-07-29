@@ -9,7 +9,6 @@ aimbot.moduleInfo = {
 local settings = lje.settings.open()
 
 aimbot.currentTarget = nil
-aimbot.speedMultiplier = 1000 -- how snappy it is, too much and it's obvious!
 aimbot.key = _G["KEY_" .. lje.settings.get("keybinds.aimbot", "X")]
 
 local mouse = lje.include("helpers/mouse.lua")
@@ -23,7 +22,10 @@ local cfg = af.config.register("aimbot", {
 	maxDistance = { value = 0, min = 0, max = 8192 },
 	requireLOS = { value = true },
 	drawFov = { value = true },
-}, { "fov", "maxDistance", "requireLOS", "drawFov" })
+	speedMultiplier = { value = 2, min = 0, max = 10 }, -- how snappy it is, too much and it's obvious!
+	ownVelocityComp = { value = 0.055, min = 0, max = 0.5 }, -- compensates for your own movement throwing off the aim point
+	targetVelocityComp = { value = 0.06, min = 0, max = 0.5 }, -- leads a moving target by this much of their velocity
+}, { "fov", "maxDistance", "requireLOS", "drawFov", "speedMultiplier", "ownVelocityComp", "targetVelocityComp" })
 
 local function inFov(toTargetNormalized)
 	if cfg.fov >= 180 then
@@ -84,6 +86,7 @@ function aimbot:render()
 end
 
 function aimbot:run()
+	if vgui.CursorVisible() then return end --dont aimbot while a menu is open
 	-- Find closest player and aim at them
 	if not input.IsKeyDown(self.key) then -- If we hold it down, we don't want to change targets.
 		local players = player.GetAll()
@@ -129,7 +132,7 @@ function aimbot:run()
 		self.currentTarget = closestPlayer
 	end
 
-	if not self.currentTarget or not input.IsKeyDown(self.key) then
+	if not self.currentTarget or not self.currentTarget:IsValid() or not input.IsKeyDown(self.key) then
 		return
 	end
 
@@ -137,8 +140,8 @@ function aimbot:run()
 	local ourVelocity = LocalPlayer():GetVelocity()
 	local theirVelocity = self.currentTarget:GetVelocity()
 
-	ourVelocity = ourVelocity * 0.03 -- Compensate
-	theirVelocity = theirVelocity * 0.05
+	ourVelocity = ourVelocity * cfg.ownVelocityComp * 2
+	theirVelocity = theirVelocity * cfg.targetVelocityComp * 2
 
 	local targetPos = self.currentTarget:GetPos() + Vector(0, 0, 50) -- Aim at chest for better hit chance
 
@@ -178,8 +181,8 @@ function aimbot:run()
 		effectivePitch = 0
 	end
 
-	local dx = effectiveYaw * (m_yaw * sens) * self.speedMultiplier * FrameTime() -- Sinusoidal movement pattern for more human-like movement
-	local dy = effectivePitch * (m_pitch * sens) * self.speedMultiplier * FrameTime()
+	local dx = effectiveYaw * (m_yaw * sens) * cfg.speedMultiplier * 1000 * FrameTime() -- Sinusoidal movement pattern for more human-like movement
+	local dy = effectivePitch * (m_pitch * sens) * cfg.speedMultiplier * 1000 * FrameTime()
 
 	-- Flip for windows coordinate system
 	dx = -dx

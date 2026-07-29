@@ -54,6 +54,7 @@ function keybinds.unbind(key)
 	return true
 end
 hook.Add("Think", "antifreeze.keybinds.poll", function()
+	if vgui.CursorVisible() then return end
 	for key, keyCode in pairs(keybinds.keyCodes) do
 		local isDown = input.IsKeyDown(keyCode)
 		if isDown and not keybinds.state[key] then

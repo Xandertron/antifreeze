@@ -27,6 +27,7 @@ af.config = lje.include("lib/config.lua")
 af.log = lje.include("lib/log.lua")
 af.commands = lje.include("lib/commands.lua")
 af.keybinds = lje.include("lib/keybinds.lua")
+af.scriptdump = lje.include("lib/scriptdump.lua")
 local drawOverlay = lje.include("services/ui.lua")
 
 local settings = lje.settings.open()
