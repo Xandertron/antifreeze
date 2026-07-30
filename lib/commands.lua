@@ -1,4 +1,4 @@
-local commands = commands or {}
+commands = commands or {}
 commands.registry = commands.registry or {}
 commands.log = commands.log or {}
 

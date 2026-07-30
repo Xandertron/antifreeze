@@ -1,4 +1,5 @@
-local keybinds = keybinds or {}
+-- bare global, not `local` - see the note in commands.lua for why
+keybinds = keybinds or {}
 keybinds.registry = keybinds.registry or {} -- key -> command string
 keybinds.keyCodes = keybinds.keyCodes or {} -- key -> resolved KEY_* constant
 keybinds.state = keybinds.state or {} -- key -> was it down last frame (for rising-edge detection)

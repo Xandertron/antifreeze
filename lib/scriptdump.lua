@@ -12,7 +12,9 @@
 -- for the life of the script - keep that in mind if you ever add something
 -- else that needs it.
 
-local scriptdump = scriptdump or {}
+-- deliberately a bare global, not `local` - see the note in commands.lua
+-- for why that's the part that actually makes this survive a hot-reload
+scriptdump = scriptdump or {}
 
 -- Some chunknames get reused across many, entirely different executions -
 -- e.g. admin "run this Lua" console commands typically RunString every
@@ -318,30 +320,37 @@ local function buildDumpFilename()
 end
 
 --------------------------------------------------------------------------
--- flatten { name -> {history...} } into buildZip's { name, source } entries,
--- joining re-runs with a divider so the file stays one readable document
+-- collapse a captured name's execution history into one displayable string,
+-- joining re-runs with a divider - shared by the zip export below and by
+-- services/ui.lua's explorer tab code viewer, so both show the same thing
 --------------------------------------------------------------------------
 
-local function buildEntries()
-	local entries = {}
-
-	for _, name in ipairs(scriptdump.order) do
-		local history = scriptdump.history[name]
-
-		if #history == 1 then
-			entries[#entries + 1] = { name = name, source = history[1] }
-		else
-			local parts = {}
-			for i, source in ipairs(history) do
-				if i > 1 then
-					parts[#parts + 1] = string.format("\n\n--[[ scriptdump: execution %d/%d ]]\n\n", i, #history)
-				end
-				parts[#parts + 1] = source
-			end
-			entries[#entries + 1] = { name = name, source = table.concat(parts) }
-		end
+function scriptdump.getSource(name)
+	local history = scriptdump.history[name]
+	if not history then
+		return nil
 	end
 
+	if #history == 1 then
+		return history[1]
+	end
+
+	local parts = {}
+	for i, source in ipairs(history) do
+		if i > 1 then
+			parts[#parts + 1] = string.format("\n\n--[[ scriptdump: execution %d/%d ]]\n\n", i, #history)
+		end
+		parts[#parts + 1] = source
+	end
+	return table.concat(parts)
+end
+
+-- flatten { name -> {history...} } into buildZip's { name, source } entries
+local function buildEntries()
+	local entries = {}
+	for _, name in ipairs(scriptdump.order) do
+		entries[#entries + 1] = { name = name, source = scriptdump.getSource(name) }
+	end
 	return entries
 end
 

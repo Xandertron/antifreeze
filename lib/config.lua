@@ -1,4 +1,5 @@
-local config = config or {}
+-- bare global, not `local` - see the note in commands.lua for why
+config = config or {}
 config.defaults = config.defaults or {} -- configName -> { key = {value=.., min=.., max=..}, ... }
 config.raw      = config.raw or {}      -- configName -> live table, same shape as defaults
 config.proxies  = config.proxies or {}  -- configName -> ergonomic proxy table
