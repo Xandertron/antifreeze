@@ -11,7 +11,7 @@ aimlines = true
 material = "models/shiny"
 
 [block]
-http = true
+http = false
 openurl = true
 
 [log]
