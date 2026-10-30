@@ -163,6 +163,18 @@ local function cCapture(spec)
 			idx
 		)
 	elseif spec.category == "number" then
+		if spec.bits then
+			-- `bits` is declared by cPrelude, read before original runs
+			return string.format(
+				[[
+	double v = lua_tonumber(L, %s);
+	char buf[64];
+	int n = snprintf(buf, sizeof(buf), "%%g (%%d bits)", v, bits);
+	push_entry(n, buf);
+]],
+				idx
+			)
+		end
 		return string.format(
 			[[
 	double v = lua_tonumber(L, %s);
@@ -203,6 +215,18 @@ local function cCapture(spec)
 	end
 end
 
+-- Extra args that have to be read before original runs. For Write* the
+-- bit count is the 2nd arg (after the value); for Read* it's the only
+-- arg, so it's arg 1 - read up front rather than trusting it's still on
+-- the stack once original has pushed its result.
+local function cPrelude(spec)
+	if spec.bits then
+		local bitsIdx = spec.mode == "arg" and 2 or 1
+		return string.format("\tint bits = (int)lua_tonumber(L, %d);\n", bitsIdx)
+	end
+	return ""
+end
+
 local function generateSource(spec)
 	local body = cCapture(spec)
 	if spec.mode == "arg" then
@@ -210,6 +234,7 @@ local function generateSource(spec)
 	else
 		body = "\tint nres = original(L);\n" .. body .. "\treturn nres;\n"
 	end
+	body = cPrelude(spec) .. body
 
 	return cHeader(spec) .. "\nint detour(lua_State* L) {\n" .. body .. "}\n"
 end
@@ -228,10 +253,11 @@ local specs = {
 	{ name = "ReadDouble", mode = "return", category = "number" },
 	{ name = "WriteFloat", mode = "arg", category = "number" },
 	{ name = "ReadFloat", mode = "return", category = "number" },
-	{ name = "WriteInt", mode = "arg", category = "number" },
-	{ name = "ReadInt", mode = "return", category = "number" },
-	{ name = "WriteUInt", mode = "arg", category = "number" },
-	{ name = "ReadUInt", mode = "return", category = "number" },
+	-- bits = true: also log the bit count arg, e.g. "255 (8 bits)"
+	{ name = "WriteInt", mode = "arg", category = "number", bits = true },
+	{ name = "ReadInt", mode = "return", category = "number", bits = true },
+	{ name = "WriteUInt", mode = "arg", category = "number", bits = true },
+	{ name = "ReadUInt", mode = "return", category = "number", bits = true },
 
 	{ name = "WriteString", mode = "arg", category = "string" },
 	{ name = "ReadString", mode = "return", category = "string" },
@@ -326,9 +352,18 @@ local function beginMessage(direction, name)
 	--lje.con_printf("[net] %s %s %s", nog.current.time, direction == "receive" and "v" or "^", name)
 end
 
-local function logField(fn, value)
+-- raw is the undecorated captured bytes (no hex, no " ..."), kept so the
+-- panel's Lua converter can reproduce strings/data exactly
+local function logField(fn, value, raw, truncated)
 	if nog.current then
-		table.insert(nog.current.fields, { fn = fn, value = value })
+		-- Int/UInt detours encode their bit count as "<value> (<n> bits)"
+		local num, bits = string.match(value, "^(%S+) %((%d+) bits%)$")
+		if num then
+			value = num
+			raw = num
+			bits = tonumber(bits)
+		end
+		table.insert(nog.current.fields, { fn = fn, value = value, raw = raw, truncated = truncated, bits = bits })
 		--lje.con_printf("[net]     %s = %s", fn, tostring(value))
 	end
 end
@@ -424,7 +459,7 @@ function detour:run()
 		elseif name == "ReadHeader" then
 			beginMessage("receive", util.NetworkIDToString(tonumber(value) or 0))
 		else
-			logField(name, value)
+			logField(name, value, rawValue, trueLen > VALUE_MAX)
 		end
 
 		seen = seen + 1
